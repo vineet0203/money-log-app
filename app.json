@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "Money Log",
+    "slug": "money-log",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "moneylog",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "bundleIdentifier": "com.moneylog.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#FFFFFF"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.moneylog.app"
+    },
+    "web": {
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#1591DC",
+          "image": "./assets/images/logo.png",
+          "imageWidth": 150
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "router": {}
+    }
+  }
+}
