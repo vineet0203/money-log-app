@@ -9,7 +9,7 @@ export default function AppLayout() {
   const insets = useSafeAreaInsets();
 
   if (!isAuthenticated) {
-    return <Redirect href="/" />;
+    return <Redirect href="/(auth)" />;
   }
 
   const TabIcon = ({ name, focused, color }: { name: any, focused: boolean, color: string }) => (

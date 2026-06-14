@@ -4,6 +4,7 @@
     "slug": "money-log",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/images/logo.png",
     "scheme": "moneylog",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -11,6 +12,7 @@
     },
     "android": {
       "adaptiveIcon": {
+        "foregroundImage": "./assets/images/logo.png",
         "backgroundColor": "#FFFFFF"
       },
       "predictiveBackGestureEnabled": false,
@@ -24,9 +26,9 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#1591DC",
-          "image": "./assets/images/logo.png",
-          "imageWidth": 150
+          "backgroundColor": "#FFFFFF",
+          "image": "./assets/images/splash.png",
+          "imageWidth": 350
         }
       ]
     ],
