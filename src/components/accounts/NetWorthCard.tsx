@@ -19,7 +19,7 @@ export default function NetWorthCard() {
       <View className="flex-row justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100">
         <View className="flex-row items-center">
           <View className="w-8 h-8 rounded-full bg-blue-100 items-center justify-center mr-3 border border-blue-200">
-            <Ionicons name="arrow-down" size={16} color="#3B82F6" />
+            <Ionicons name="arrow-down" size={16} color="#6BCB77" />
           </View>
           <View>
             <Text className="text-textMuted text-xs">Assets</Text>

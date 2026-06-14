@@ -25,7 +25,7 @@ export default function Notifications() {
         </View>
       </View>
       <Switch
-        trackColor={{ false: "#E2E8F0", true: "#1591DC" }}
+        trackColor={{ false: "#E2E8F0", true: "#6BCB77" }}
         thumbColor={"#FFFFFF"}
         ios_backgroundColor="#E2E8F0"
         onValueChange={onValueChange}

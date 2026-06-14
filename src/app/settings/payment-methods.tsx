@@ -55,7 +55,7 @@ export default function PaymentMethods() {
               >
                 <View className="flex-row items-center">
                   <View className={`w-12 h-12 ${account.bg} rounded-2xl items-center justify-center mr-4 border border-slate-50`}>
-                    <Ionicons name={account.icon as any} size={22} color={account.color.replace('bg-[', '').replace(']', '') || '#1591DC'} />
+                    <Ionicons name={account.icon as any} size={22} color={account.color.replace('bg-[', '').replace(']', '') || '#6BCB77'} />
                   </View>
                   <View>
                     <Text className="text-slate-800 font-bold text-base mb-1">{account.name}</Text>

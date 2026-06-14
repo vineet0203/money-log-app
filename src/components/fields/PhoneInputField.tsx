@@ -28,7 +28,7 @@ export default function PhoneInputField({ value, onChangeText, onChangeFormatted
           backgroundColor: '#F8FAFC',
           borderRadius: 16,
           borderWidth: 2,
-          borderColor: error ? '#EF4444' : isFocused ? '#1591DC' : '#F1F5F9',
+          borderColor: error ? '#EF4444' : isFocused ? '#6BCB77' : '#F1F5F9',
         }}
         flagButtonStyle={{
           width: 70, // Reduced width since the flag is hidden

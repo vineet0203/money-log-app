@@ -25,7 +25,7 @@ export default function SubscriptionsList() {
         </TouchableOpacity>
         <Text className="font-bold text-lg text-text">Subscriptions</Text>
         <TouchableOpacity className="w-10 h-10 bg-primary/10 rounded-full items-center justify-center">
-          <Ionicons name="add" size={24} color="#1591DC" />
+          <Ionicons name="add" size={24} color="#6BCB77" />
         </TouchableOpacity>
       </View>
 

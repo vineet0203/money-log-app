@@ -70,7 +70,7 @@ export default function AccountDetails() {
 
         <View className="items-center mb-2">
           <View className={`w-16 h-16 rounded-full ${account.bg} items-center justify-center mb-4`}>
-            <Ionicons name={account.icon as any} size={28} color={account.color.replace('bg-[', '').replace(']', '') || '#3B82F6'} />
+            <Ionicons name={account.icon as any} size={28} color={account.color.replace('bg-[', '').replace(']', '') || '#6BCB77'} />
           </View>
           <Text className="text-textMuted font-medium text-sm mb-1 uppercase tracking-widest">{account.name}</Text>
           <Text className="text-4xl font-extrabold text-text tracking-tight">{account.amount}</Text>
@@ -157,7 +157,7 @@ export default function AccountDetails() {
                 onPress={() => setSelectingDate('start')}
                 className={`flex-1 p-4 rounded-2xl border mr-2 items-center flex-row justify-center ${selectingDate === 'start' ? 'bg-primary/10 border-primary' : 'bg-slate-50 border-slate-200'}`}
               >
-                <Ionicons name="calendar-outline" size={18} color={selectingDate === 'start' ? '#0284C7' : '#64748B'} className="mr-2" />
+                <Ionicons name="calendar-outline" size={18} color={selectingDate === 'start' ? '#4CAF50' : '#64748B'} className="mr-2" />
                 <Text className={`font-semibold ml-2 ${selectingDate === 'start' ? 'text-primary' : 'text-slate-700'}`}>{formatDate(startDate)}</Text>
               </TouchableOpacity>
               
@@ -165,7 +165,7 @@ export default function AccountDetails() {
                 onPress={() => setSelectingDate('end')}
                 className={`flex-1 p-4 rounded-2xl border ml-2 items-center flex-row justify-center ${selectingDate === 'end' ? 'bg-primary/10 border-primary' : 'bg-slate-50 border-slate-200'}`}
               >
-                <Ionicons name="calendar-outline" size={18} color={selectingDate === 'end' ? '#0284C7' : '#64748B'} className="mr-2" />
+                <Ionicons name="calendar-outline" size={18} color={selectingDate === 'end' ? '#4CAF50' : '#64748B'} className="mr-2" />
                 <Text className={`font-semibold ml-2 ${selectingDate === 'end' ? 'text-primary' : 'text-slate-700'}`}>{formatDate(endDate)}</Text>
               </TouchableOpacity>
             </View>

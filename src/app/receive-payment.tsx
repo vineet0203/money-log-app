@@ -31,7 +31,7 @@ export default function ReceivePayment() {
         <Text className="font-bold text-lg text-slate-800">Receive Money</Text>
 
         <TouchableOpacity className="w-10 h-10 bg-blue-50 rounded-full items-center justify-center border border-blue-100">
-          <Ionicons name="share-outline" size={20} color="#1591DC" />
+          <Ionicons name="share-outline" size={20} color="#6BCB77" />
         </TouchableOpacity>
       </View>
 

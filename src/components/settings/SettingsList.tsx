@@ -36,7 +36,7 @@ export default function SettingsList({ title, items }: SettingsGroupProps) {
               ) : (
                 <Switch 
                   value={item.value} 
-                  trackColor={{ false: '#E2E8F0', true: '#1591DC' }}
+                  trackColor={{ false: '#E2E8F0', true: '#6BCB77' }}
                   thumbColor="#FFF"
                 />
               )}

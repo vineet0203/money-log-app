@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const mockBillsData: Record<string, any> = {
   '1': { name: 'Electricity Bill', due: 'Due in 2 days', amount: '$120.00', icon: 'flash', bg: 'bg-orange-100', color: '#F97316', biller: 'City Power Co.', autoPay: 'Off', isSubscription: false },
-  '2': { name: 'Internet Bill', due: 'Due in 5 days', amount: '$60.00', icon: 'wifi', bg: 'bg-blue-100', color: '#3B82F6', biller: 'Comcast', autoPay: 'On', isSubscription: false },
+  '2': { name: 'Internet Bill', due: 'Due in 5 days', amount: '$60.00', icon: 'wifi', bg: 'bg-blue-100', color: '#6BCB77', biller: 'Comcast', autoPay: 'On', isSubscription: false },
   '3': { name: 'Netflix Premium', due: 'Due in 2 days', amount: '$19.99', icon: 'tv', bg: 'bg-red-100', color: '#EF4444', biller: 'Netflix', autoPay: 'On', isSubscription: true },
   '6': { name: 'Netflix Premium', due: 'Due in 2 days', amount: '$19.99', icon: 'tv', bg: 'bg-red-100', color: '#EF4444', biller: 'Netflix', autoPay: 'On', isSubscription: true },
 };

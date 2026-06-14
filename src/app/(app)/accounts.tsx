@@ -32,7 +32,7 @@ export default function Accounts() {
         )}
 
         <TouchableOpacity className="flex-row items-center justify-center bg-primary/10 py-4 rounded-2xl mb-10 mt-2 border border-primary/20">
-          <Ionicons name="add" size={22} color="#1591DC" />
+          <Ionicons name="add" size={22} color="#6BCB77" />
           <Text className="text-primary font-bold text-base ml-2">Add New Account</Text>
         </TouchableOpacity>
       </ScrollView>

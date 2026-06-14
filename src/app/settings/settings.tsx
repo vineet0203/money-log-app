@@ -38,7 +38,7 @@ export default function Settings() {
             <Text className="text-slate-800 font-bold text-base">Dark Mode</Text>
           </View>
           <Switch
-            trackColor={{ false: "#E2E8F0", true: "#1591DC" }}
+            trackColor={{ false: "#E2E8F0", true: "#6BCB77" }}
             thumbColor={"#FFFFFF"}
             ios_backgroundColor="#E2E8F0"
             onValueChange={setDarkMode}

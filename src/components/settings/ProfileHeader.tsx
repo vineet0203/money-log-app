@@ -12,7 +12,7 @@ export default function ProfileHeader() {
         <Text className="text-textMuted text-sm font-medium">+1 123-456-7890</Text>
       </View>
       <TouchableOpacity className="bg-primary/10 w-10 h-10 rounded-full items-center justify-center">
-        <Ionicons name="pencil" size={18} color="#1591DC" />
+        <Ionicons name="pencil" size={18} color="#6BCB77" />
       </TouchableOpacity>
     </View>
   );

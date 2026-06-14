@@ -28,7 +28,7 @@ export default function InviteFriends() {
         
         <View className="items-center mb-10">
           <View className="w-32 h-32 bg-blue-50 rounded-full items-center justify-center mb-6 border border-blue-100">
-            <Ionicons name="gift" size={60} color="#1591DC" />
+            <Ionicons name="gift" size={60} color="#6BCB77" />
           </View>
           <Text className="text-slate-800 font-extrabold text-2xl text-center mb-2">Give $20, Get $20</Text>
           <Text className="text-slate-500 text-center text-base px-4">
@@ -41,7 +41,7 @@ export default function InviteFriends() {
           <View className="bg-slate-50 border border-slate-200 py-4 rounded-xl items-center flex-row justify-center mb-4">
             <Text className="text-slate-800 font-bold text-2xl tracking-[0.2em] ml-4">ALEX20ML</Text>
             <TouchableOpacity className="ml-4">
-              <Ionicons name="copy-outline" size={20} color="#1591DC" />
+              <Ionicons name="copy-outline" size={20} color="#6BCB77" />
             </TouchableOpacity>
           </View>
         </View>

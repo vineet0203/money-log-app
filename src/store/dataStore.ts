@@ -29,11 +29,11 @@ export const useDataStore = create<DataState>((set) => ({
   ],
   subscriptions: [
     { id: 1, name: 'Netflix Premium', nextBilling: 'Oct 15', amount: '$19.99', icon: 'tv', bg: 'bg-red-50', color: '#EF4444' },
-    { id: 2, name: 'Amazon Prime', nextBilling: 'Oct 18', amount: '$14.99', icon: 'logo-amazon', bg: 'bg-blue-50', color: '#3B82F6' },
+    { id: 2, name: 'Amazon Prime', nextBilling: 'Oct 18', amount: '$14.99', icon: 'logo-amazon', bg: 'bg-blue-50', color: '#6BCB77' },
   ],
   bills: [
     { id: 1, name: 'Electricity Bill', due: 'Due in 2 days', amount: '$120.00', icon: 'flash', bg: 'bg-orange-50', color: '#F97316', status: 'Pending' },
-    { id: 2, name: 'Internet Bill', due: 'Due in 5 days', amount: '$60.00', icon: 'wifi', bg: 'bg-blue-50', color: '#3B82F6', status: 'Pending' },
+    { id: 2, name: 'Internet Bill', due: 'Due in 5 days', amount: '$60.00', icon: 'wifi', bg: 'bg-blue-50', color: '#6BCB77', status: 'Pending' },
   ],
   cashAccounts: [
     { id: '1', name: 'Checking', bank: 'Chase Bank', amount: '$7,850.25', icon: 'business', color: 'bg-[#1D4ED8]', bg: 'bg-blue-50' },
@@ -44,7 +44,7 @@ export const useDataStore = create<DataState>((set) => ({
   budgets: [
     { id: 1, category: 'Housing & Rent', spent: 1500, limit: 1500, icon: 'home', bg: 'bg-indigo-50', color: '#6366F1' },
     { id: 2, category: 'Food & Dining', spent: 420, limit: 500, icon: 'restaurant', bg: 'bg-orange-50', color: '#F97316' },
-    { id: 3, category: 'Transportation', spent: 180, limit: 200, icon: 'car', bg: 'bg-blue-50', color: '#3B82F6' },
+    { id: 3, category: 'Transportation', spent: 180, limit: 200, icon: 'car', bg: 'bg-blue-50', color: '#6BCB77' },
   ],
 
   // Setters

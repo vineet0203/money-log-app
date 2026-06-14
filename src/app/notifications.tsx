@@ -67,7 +67,7 @@ export default function NotificationsInbox() {
         <Text className="font-bold text-lg text-slate-800">Notifications</Text>
         
         <TouchableOpacity className="w-10 h-10 items-center justify-center">
-          <Ionicons name="checkmark-done-outline" size={24} color="#1591DC" />
+          <Ionicons name="checkmark-done-outline" size={24} color="#6BCB77" />
         </TouchableOpacity>
       </View>
 

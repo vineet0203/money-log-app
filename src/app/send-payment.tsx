@@ -39,7 +39,7 @@ export default function SendPayment() {
         <Text className="font-bold text-lg text-text">Send Money</Text>
 
         <TouchableOpacity className="w-10 h-10 bg-blue-50 rounded-full items-center justify-center border border-blue-100">
-          <Ionicons name="qr-code-outline" size={20} color="#1591DC" />
+          <Ionicons name="qr-code-outline" size={20} color="#6BCB77" />
         </TouchableOpacity>
       </View>
 
@@ -52,7 +52,7 @@ export default function SendPayment() {
           {/* Recipient Selection Placeholder */}
           <TouchableOpacity className="flex-row items-center bg-slate-50 border border-slate-200 p-4 rounded-2xl mb-12 shadow-sm shadow-slate-100">
             <View className="w-12 h-12 bg-primary/20 rounded-full items-center justify-center mr-4">
-              <Ionicons name="search" size={20} color="#1591DC" />
+              <Ionicons name="search" size={20} color="#6BCB77" />
             </View>
             <View className="flex-1">
               <Text className="text-textMuted font-medium text-sm">To</Text>
@@ -74,7 +74,7 @@ export default function SendPayment() {
                 onChangeText={handleAmountChange}
                 placeholder="0.00"
                 placeholderTextColor="#CBD5E1"
-                selectionColor="#1591DC"
+                selectionColor="#6BCB77"
               />
             </View>
           </View>

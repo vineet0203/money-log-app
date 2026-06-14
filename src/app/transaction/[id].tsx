@@ -42,7 +42,7 @@ export default function TransactionDetails() {
         </View>
 
         <TouchableOpacity className="flex-row items-center justify-center bg-primary/10 py-4 rounded-2xl mt-8 border border-primary/20">
-          <Ionicons name="receipt-outline" size={20} color="#1591DC" />
+          <Ionicons name="receipt-outline" size={20} color="#6BCB77" />
           <Text className="text-primary font-bold text-base ml-2">Add Receipt</Text>
         </TouchableOpacity>
       </View>
