@@ -5,6 +5,7 @@ import AccountGroup from '../../components/accounts/AccountGroup';
 import EmptyState from '../../components/common/EmptyState';
 import { Ionicons } from '@expo/vector-icons';
 import { useDataStore } from '../../store/dataStore';
+import RecentTransactions from '../../components/homepage/RecentTransactions';
 
 export default function Accounts() {
   const cashAccountsData = useDataStore((state) => state.cashAccounts);
@@ -31,10 +32,12 @@ export default function Accounts() {
           </>
         )}
 
-        <TouchableOpacity className="flex-row items-center justify-center bg-primary/10 py-4 rounded-2xl mb-10 mt-2 border border-primary/20">
+        <TouchableOpacity className="flex-row items-center justify-center bg-primary/10 py-4 rounded-2xl mt-2 mb-6 border border-primary/20">
           <Ionicons name="add" size={22} color="#6BCB77" />
           <Text className="text-primary font-bold text-base ml-2">Add New Account</Text>
         </TouchableOpacity>
+
+        <RecentTransactions />
       </ScrollView>
     </View>
   );

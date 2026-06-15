@@ -3,7 +3,7 @@ import Header from '../../components/common/Header';
 import BalanceCard from '../../components/homepage/BalanceCard';
 import IncomeExpenseCards from '../../components/homepage/IncomeExpenseCards';
 import BudgetProgressCard from '../../components/homepage/BudgetProgressCard';
-import RecentTransactions from '../../components/homepage/RecentTransactions';
+
 import UpcomingBills from '../../components/homepage/UpcomingBills';
 import ActiveSubscriptions from '../../components/homepage/ActiveSubscriptions';
 
@@ -15,9 +15,9 @@ export default function Home() {
         <BalanceCard />
         <IncomeExpenseCards />
         <BudgetProgressCard />
-        <RecentTransactions />
-        <UpcomingBills />
+
         <ActiveSubscriptions />
+        <UpcomingBills />
       </ScrollView>
     </View>
   );
