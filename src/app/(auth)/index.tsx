@@ -1,39 +1,45 @@
-import { View, Text, Image, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { View, Text, Image, TouchableOpacity, ActivityIndicator, Platform } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
 import { useRouter } from "expo-router";
 import { useAuthStore } from "../../store/authStore";
 import PhoneInputField from "../../components/fields/PhoneInputField";
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 export default function Login() {
   const router = useRouter();
-  const { login } = useAuthStore();
+  const { sendOtp } = useAuthStore();
   const [phone, setPhone] = useState("");
   const [formattedPhone, setFormattedPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleLogin = async () => {
+  const handleSendOtp = async () => {
     if (phone.length < 5) {
       setError("Please enter a valid phone number");
       return;
     }
     setError("");
     setLoading(true);
-    await login(formattedPhone);
+    const success = await sendOtp(formattedPhone);
     setLoading(false);
-    // Router redirect happens automatically via _layout
+    
+    if (success) {
+      router.push('/(auth)/verify');
+    } else {
+      setError("Invalid number. Use 9999999999");
+    }
   };
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      className="flex-1 bg-white"
-    >
-      <ScrollView 
-        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 32, paddingBottom: 40 }}
+    <View className="flex-1 bg-white">
+      <KeyboardAwareScrollView 
+        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 32 }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        enableOnAndroid={true}
+        enableAutomaticScroll={true}
+        extraScrollHeight={Platform.OS === 'ios' ? 20 : 0}
       >
         {/* Header / Logo Section */}
         <View className="items-center mb-8 mt-4">
@@ -66,7 +72,7 @@ export default function Login() {
           />
           
           <TouchableOpacity 
-            onPress={handleLogin}
+            onPress={handleSendOtp}
             disabled={loading}
             className={`w-full bg-primary py-4 rounded-full items-center mt-2 shadow-md shadow-primary/30 ${loading ? 'opacity-70' : ''}`}
           >
@@ -77,8 +83,8 @@ export default function Login() {
             )}
           </TouchableOpacity>
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
       <StatusBar style="dark" />
-    </KeyboardAvoidingView>
+    </View>
   );
 }

@@ -56,7 +56,10 @@ export default function PhoneInputField({ value, onChangeText, onChangeFormatted
           onFocus: () => setIsFocused(true),
           onBlur: () => setIsFocused(false),
           placeholderTextColor: '#94A3B8',
+          keyboardType: 'number-pad',
         }}
+        withDarkTheme={false}
+        withShadow={false}
         autoFocus
       />
       {error ? (
