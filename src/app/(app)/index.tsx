@@ -1,24 +1,19 @@
-import { View, ScrollView } from 'react-native';
-import Header from '../../components/common/Header';
-import BalanceCard from '../../components/homepage/BalanceCard';
-import IncomeExpenseCards from '../../components/homepage/IncomeExpenseCards';
-import BudgetProgressCard from '../../components/homepage/BudgetProgressCard';
-
-import UpcomingBills from '../../components/homepage/UpcomingBills';
-import ActiveSubscriptions from '../../components/homepage/ActiveSubscriptions';
+import { View, Text, TouchableOpacity } from 'react-native';
+import { useAuthStore } from '../../store/authStore';
 
 export default function Home() {
-  return (
-    <View className="flex-1 bg-background">
-      <Header title="Hi, Alex 👋" />
-      <ScrollView className="flex-1 px-5 pt-4" showsVerticalScrollIndicator={false}>
-        <BalanceCard />
-        <IncomeExpenseCards />
-        <BudgetProgressCard />
+  const { logout } = useAuthStore();
 
-        <ActiveSubscriptions />
-        <UpcomingBills />
-      </ScrollView>
+  return (
+    <View className="flex-1 bg-white items-center justify-center px-4">
+      <Text className="text-xl font-bold mb-6 text-primary">You are logged in.</Text>
+      
+      <TouchableOpacity 
+        onPress={logout}
+        className="px-6 py-3 bg-red-500 rounded-full"
+      >
+        <Text className="text-white font-bold">Logout</Text>
+      </TouchableOpacity>
     </View>
   );
 }

@@ -7,22 +7,22 @@ import PhoneInputField from "../../components/fields/PhoneInputField";
 
 export default function Login() {
   const router = useRouter();
-  const { sendOtp } = useAuthStore();
+  const { login } = useAuthStore();
   const [phone, setPhone] = useState("");
   const [formattedPhone, setFormattedPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSendOtp = async () => {
+  const handleLogin = async () => {
     if (phone.length < 5) {
       setError("Please enter a valid phone number");
       return;
     }
     setError("");
     setLoading(true);
-    await sendOtp(formattedPhone);
+    await login(formattedPhone);
     setLoading(false);
-    router.push('/(auth)/verify');
+    // Router redirect happens automatically via _layout
   };
 
   return (
@@ -66,7 +66,7 @@ export default function Login() {
           />
           
           <TouchableOpacity 
-            onPress={handleSendOtp}
+            onPress={handleLogin}
             disabled={loading}
             className={`w-full bg-primary py-4 rounded-full items-center mt-2 shadow-md shadow-primary/30 ${loading ? 'opacity-70' : ''}`}
           >
