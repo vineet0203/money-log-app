@@ -1,22 +1,19 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Modal, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Modal, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Header from '../components/common/Header';
 import FloatingActionButton from '../components/common/FloatingActionButton';
-import { Category } from '../types';
-
-const INITIAL_CATEGORIES: Category[] = [
-  { id: '1', name: 'Food & Dining', iconName: 'fast-food', color: '#F97316', budgetLimit: 600 },
-  { id: '2', name: 'Housing', iconName: 'home', color: '#3B82F6', budgetLimit: 2000 },
-  { id: '3', name: 'Transportation', iconName: 'car', color: '#A855F7', budgetLimit: 300 },
-  { id: '4', name: 'Entertainment', iconName: 'game-controller', color: '#10B981', budgetLimit: 150 },
-];
+import { useCategories, useAddCategory, useUpdateCategory, useDeleteCategory, Category } from '../api/categories';
 
 const AVAILABLE_COLORS = ['#F97316', '#3B82F6', '#A855F7', '#10B981', '#EF4444', '#EAB308', '#06B6D4', '#EC4899'];
 const AVAILABLE_ICONS = ['fast-food', 'home', 'car', 'game-controller', 'cart', 'airplane', 'fitness', 'medical', 'book', 'cafe'];
 
 export default function CategoriesScreen() {
-  const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
+  const { data: categories, isLoading } = useCategories();
+  const addCategoryMutation = useAddCategory();
+  const updateCategoryMutation = useUpdateCategory();
+  const deleteCategoryMutation = useDeleteCategory();
+
   const [modalVisible, setModalVisible] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
@@ -53,26 +50,29 @@ export default function CategoriesScreen() {
     const parsedBudget = formBudget ? parseFloat(formBudget) : undefined;
 
     if (editingCategory) {
-      setCategories(prev => prev.map(c => c.id === editingCategory.id ? {
-        ...c, name: formName, color: formColor, iconName: formIcon as any, budgetLimit: parsedBudget
-      } : c));
-    } else {
-      setCategories(prev => [...prev, {
-        id: Date.now().toString(),
+      updateCategoryMutation.mutate({
+        id: editingCategory.id,
         name: formName,
+        icon_name: formIcon,
         color: formColor,
-        iconName: formIcon as any,
-        budgetLimit: parsedBudget
-      }]);
+        budget_limit: parsedBudget
+      });
+    } else {
+      addCategoryMutation.mutate({
+        name: formName,
+        icon_name: formIcon,
+        color: formColor,
+        budget_limit: parsedBudget
+      });
     }
     setModalVisible(false);
   };
 
   const handleDelete = (id: string) => {
-    Alert.alert('Delete Category', 'Are you sure you want to delete this category?', [
+    Alert.alert('Delete Category', 'Are you sure you want to delete this category? Its transactions will be marked as Others.', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: () => {
-        setCategories(prev => prev.filter(c => c.id !== id));
+        deleteCategoryMutation.mutate(id);
       }}
     ]);
   };
@@ -82,37 +82,77 @@ export default function CategoriesScreen() {
       <Header title="Categories & Budgets" showBack={true} />
 
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
-        {categories.map(category => (
-          <View key={category.id} className="flex-row items-center bg-white p-4 rounded-3xl mb-3 shadow-sm shadow-slate-100 border border-slate-100">
-            
-            <View className="w-12 h-12 rounded-2xl items-center justify-center mr-4" style={{ backgroundColor: category.color + '20' }}>
-              <Ionicons name={category.iconName} size={24} color={category.color} />
-            </View>
-            
-            <View className="flex-1 justify-center">
-              <Text className="text-base font-extrabold text-slate-800">{category.name}</Text>
-              {category.budgetLimit ? (
-                <Text className="text-xs font-bold text-slate-500 mt-1">Budget: ${category.budgetLimit.toFixed(2)}/mo</Text>
-              ) : (
-                <Text className="text-xs font-medium text-slate-400 mt-1">No budget set</Text>
-              )}
-            </View>
+        {isLoading ? (
+          <ActivityIndicator color="#6BCB77" className="mt-10" />
+        ) : categories && categories.length > 0 ? (
+          categories.map(category => {
+            const spent = category.spentThisMonth || 0;
+            const budget = category.budgetLimit || 0;
+            const progress = budget > 0 ? Math.min((spent / budget) * 100, 100) : 0;
+            const isOverBudget = budget > 0 && spent > budget;
 
-            <TouchableOpacity 
-              className="w-10 h-10 items-center justify-center bg-slate-50 rounded-full mr-2"
-              onPress={() => openEditModal(category)}
-            >
-              <Ionicons name="pencil" size={18} color="#64748B" />
-            </TouchableOpacity>
+            return (
+              <View key={category.id} className="bg-white p-4 rounded-3xl mb-4 shadow-sm shadow-slate-100 border border-slate-100">
+                <View className="flex-row items-center mb-3">
+                  <View className="w-12 h-12 rounded-2xl items-center justify-center mr-4" style={{ backgroundColor: category.color + '20' }}>
+                    <Ionicons name={category.iconName as any} size={24} color={category.color} />
+                  </View>
+                  
+                  <View className="flex-1 justify-center">
+                    <Text className="text-base font-extrabold text-slate-800">{category.name}</Text>
+                    {budget > 0 ? (
+                      <Text className="text-xs font-bold text-slate-500 mt-1">
+                        Spent ${spent.toFixed(2)} of ${budget.toFixed(2)}
+                      </Text>
+                    ) : (
+                      <Text className="text-xs font-medium text-slate-400 mt-1">
+                        Spent ${spent.toFixed(2)} (No budget)
+                      </Text>
+                    )}
+                  </View>
 
-            <TouchableOpacity 
-              className="w-10 h-10 items-center justify-center bg-red-50 rounded-full"
-              onPress={() => handleDelete(category.id)}
-            >
-              <Ionicons name="trash" size={18} color="#EF4444" />
-            </TouchableOpacity>
+                  <TouchableOpacity 
+                    className="w-10 h-10 items-center justify-center bg-slate-50 rounded-full mr-2"
+                    onPress={() => openEditModal(category)}
+                  >
+                    <Ionicons name="pencil" size={18} color="#64748B" />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    className="w-10 h-10 items-center justify-center bg-red-50 rounded-full"
+                    onPress={() => handleDelete(category.id.toString())}
+                  >
+                    <Ionicons name="trash" size={18} color="#EF4444" />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Progress Bar (Only show if budget exists) */}
+                {budget > 0 && (
+                  <View className="mt-1">
+                    <View className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                      <View 
+                        className={`h-full rounded-full ${isOverBudget ? 'bg-red-500' : ''}`} 
+                        style={{ width: `${progress}%`, backgroundColor: isOverBudget ? '#EF4444' : category.color }} 
+                      />
+                    </View>
+                    {isOverBudget && (
+                      <Text className="text-[10px] font-bold text-red-500 mt-1 text-right">
+                        Over budget by ${(spent - budget).toFixed(2)}
+                      </Text>
+                    )}
+                  </View>
+                )}
+              </View>
+            );
+          })
+        ) : (
+          <View className="flex-1 items-center justify-center mt-20">
+            <Ionicons name="folder-open-outline" size={64} color="#CBD5E1" />
+            <Text className="text-slate-400 font-medium mt-4 text-center">
+              No categories found. Create one to start tracking your budgets!
+            </Text>
           </View>
-        ))}
+        )}
       </ScrollView>
 
       <FloatingActionButton onPress={openAddModal} label="New Category" />

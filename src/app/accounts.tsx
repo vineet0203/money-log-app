@@ -1,151 +1,191 @@
 import React, { useState } from 'react';
-import { View, ScrollView, Text } from 'react-native';
+import { View, ScrollView, Text, TouchableOpacity, Modal, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Header from '../components/common/Header';
 import SearchBar from '../components/common/SearchBar';
 import AccountCard from '../components/cards/AccountCard';
 import FloatingActionButton from '../components/common/FloatingActionButton';
-import { Account } from '../types';
+import { useAccounts, useAddAccount, useUpdateAccount, useDeleteAccount } from '../api/accounts';
 
-const FULL_ACCOUNTS: Account[] = [
-  {
-    id: '1',
-    name: 'Chase Checking',
-    last4: '4589',
-    balance: 5420.50,
-    logoName: 'card',
-    logoBgColor: 'bg-blue-700'
-  },
-  {
-    id: '2',
-    name: 'Wells Fargo Savings',
-    last4: '1102',
-    balance: 12500.00,
-    logoName: 'business',
-    logoBgColor: 'bg-red-700'
-  },
-  {
-    id: '3',
-    name: 'PayPal Wallet',
-    last4: 'paypal',
-    balance: 340.25,
-    logoName: 'logo-paypal',
-    logoBgColor: 'bg-sky-500'
-  },
-  {
-    id: '4',
-    name: 'Apple Card',
-    last4: '9901',
-    balance: -425.00,
-    logoName: 'logo-apple',
-    logoBgColor: 'bg-slate-800'
-  },
-  {
-    id: '5',
-    name: 'Robinhood Investing',
-    last4: 'rob1',
-    balance: 8950.40,
-    logoName: 'trending-up',
-    logoBgColor: 'bg-green-600'
-  },
-  {
-    id: '6',
-    name: 'Bank of America',
-    last4: '2022',
-    balance: 3150.00,
-    logoName: 'cash',
-    logoBgColor: 'bg-red-600'
-  },
-  {
-    id: '7',
-    name: 'Citi Credit Card',
-    last4: '8841',
-    balance: -1250.75,
-    logoName: 'card',
-    logoBgColor: 'bg-blue-500'
-  },
-  {
-    id: '8',
-    name: 'Discover Savings',
-    last4: '9902',
-    balance: 15400.00,
-    logoName: 'wallet',
-    logoBgColor: 'bg-orange-500'
-  },
-  {
-    id: '9',
-    name: 'American Express Gold',
-    last4: '3001',
-    balance: -210.50,
-    logoName: 'card',
-    logoBgColor: 'bg-slate-700'
-  },
-  {
-    id: '10',
-    name: 'Capital One Auto',
-    last4: '5566',
-    balance: -14200.00,
-    logoName: 'car',
-    logoBgColor: 'bg-red-800'
-  },
-  {
-    id: '11',
-    name: 'Fidelity 401k',
-    last4: 'fid4',
-    balance: 145000.00,
-    logoName: 'pie-chart',
-    logoBgColor: 'bg-emerald-700'
-  },
-  {
-    id: '12',
-    name: 'Vanguard Index',
-    last4: 'van9',
-    balance: 62450.00,
-    logoName: 'bar-chart',
-    logoBgColor: 'bg-red-900'
-  },
-  {
-    id: '13',
-    name: 'Cash App',
-    last4: 'cash',
-    balance: 85.00,
-    logoName: 'logo-usd',
-    logoBgColor: 'bg-green-500'
-  },
-  {
-    id: '14',
-    name: 'Venmo Balance',
-    last4: 'venm',
-    balance: 120.00,
-    logoName: 'logo-venmo',
-    logoBgColor: 'bg-blue-400'
-  },
-  {
-    id: '15',
-    name: 'Coinbase Crypto',
-    last4: 'btc1',
-    balance: 4500.00,
-    logoName: 'logo-bitcoin',
-    logoBgColor: 'bg-blue-600'
-  }
-];
+// --- Helper Component: Custom MM/YYYY Picker Modal ---
+const CustomMonthYearPicker = ({ visible, onClose, onSelect, currentDate }: any) => {
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 15 }, (_, i) => currentYear + i);
+  const months = Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0'));
+
+  const [selectedMonth, setSelectedMonth] = useState(currentDate?.split('/')[0] || months[0]);
+  const [selectedYear, setSelectedYear] = useState(currentDate?.split('/')[1] || currentYear.toString());
+
+  return (
+    <Modal visible={visible} transparent animationType="fade">
+      <View className="flex-1 justify-center items-center bg-black/50 p-4">
+        <View className="bg-white w-full rounded-2xl p-6 shadow-xl">
+          <Text className="text-xl font-bold text-center mb-4 text-gray-800">Select Expiry Date</Text>
+          
+          <View className="flex-row justify-between mb-6">
+            {/* Months Column */}
+            <View className="flex-1 mr-2">
+              <Text className="text-gray-500 font-bold mb-2 text-center">Month</Text>
+              <View className="h-48">
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  {months.map(m => (
+                    <TouchableOpacity 
+                      key={m} 
+                      onPress={() => setSelectedMonth(m)}
+                      className={`py-3 rounded-lg mb-1 ${selectedMonth === m ? 'bg-primary' : 'bg-gray-50'}`}
+                    >
+                      <Text className={`text-center font-bold ${selectedMonth === m ? 'text-white' : 'text-gray-700'}`}>{m}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            </View>
+
+            {/* Years Column */}
+            <View className="flex-1 ml-2">
+              <Text className="text-gray-500 font-bold mb-2 text-center">Year</Text>
+              <View className="h-48">
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  {years.map(y => {
+                    const yStr = y.toString();
+                    return (
+                      <TouchableOpacity 
+                        key={yStr} 
+                        onPress={() => setSelectedYear(yStr)}
+                        className={`py-3 rounded-lg mb-1 ${selectedYear === yStr ? 'bg-primary' : 'bg-gray-50'}`}
+                      >
+                        <Text className={`text-center font-bold ${selectedYear === yStr ? 'text-white' : 'text-gray-700'}`}>{yStr}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            </View>
+          </View>
+
+          <View className="flex-row gap-3">
+            <TouchableOpacity onPress={onClose} className="flex-1 p-4 rounded-xl bg-gray-100 items-center">
+              <Text className="font-bold text-gray-600">Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={() => { onSelect(`${selectedMonth}/${selectedYear}`); onClose(); }} 
+              className="flex-1 p-4 rounded-xl bg-primary items-center"
+            >
+              <Text className="font-bold text-white">Confirm</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
 
 export default function AccountsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const router = useRouter();
 
+  // API hooks
+  const { data: accounts, isLoading } = useAccounts();
+  const addAccount = useAddAccount();
+  const updateAccount = useUpdateAccount();
+  const deleteAccount = useDeleteAccount();
+
+  // Modal State
+  const [modalVisible, setModalVisible] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [type, setType] = useState<'bank' | 'card'>('bank');
+  const [name, setName] = useState('');
+  const [holderName, setHolderName] = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [expiryDate, setExpiryDate] = useState('');
+
+  // Picker State
+  const [pickerVisible, setPickerVisible] = useState(false);
+
   // Filter accounts based on search query
-  const filteredAccounts = FULL_ACCOUNTS.filter(account => 
+  const filteredAccounts = accounts?.filter(account => 
     account.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    account.last4.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+    (account.account_number && account.account_number.toLowerCase().includes(searchQuery.toLowerCase()))
+  ) || [];
+
+  const handleAddOrEdit = () => {
+    if (!name || !accountNumber) {
+      Alert.alert('Error', 'Bank/Card name and number are required');
+      return;
+    }
+
+    const payload = {
+      type,
+      name,
+      holder_name: holderName,
+      account_number: accountNumber,
+      expiry_date: type === 'card' ? expiryDate : undefined
+    };
+
+    if (editingId) {
+      updateAccount.mutate({ id: editingId, ...payload }, {
+        onSuccess: () => closeModal(),
+        onError: (err) => {
+          console.error('Update failed', err);
+          Alert.alert('Error', 'Failed to save account');
+        }
+      });
+    } else {
+      addAccount.mutate(payload, {
+        onSuccess: () => closeModal(),
+        onError: (err) => {
+          console.error('Save failed', err);
+          Alert.alert('Error', 'Failed to save account');
+        }
+      });
+    }
+  };
+
+  const handleDelete = (id: number) => {
+    Alert.alert(
+      'Remove Account',
+      'Are you sure you want to remove this account? This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Remove', 
+          style: 'destructive',
+          onPress: () => deleteAccount.mutate(id)
+        }
+      ]
+    );
+  };
+
+  const openModalForAdd = () => {
+    setEditingId(null);
+    setType('bank');
+    setName('');
+    setHolderName('');
+    setAccountNumber('');
+    setExpiryDate('');
+    setModalVisible(true);
+  };
+
+  const openModalForEdit = (account: any) => {
+    setEditingId(account.id);
+    // Coerce type strictly to bank or card
+    setType(account.type === 'card' ? 'card' : 'bank');
+    setName(account.name);
+    setHolderName(account.holder_name || '');
+    setAccountNumber(account.account_number || '');
+    setExpiryDate(account.expiry_date || '');
+    setModalVisible(true);
+  };
+
+  const closeModal = () => {
+    setModalVisible(false);
+  };
 
   return (
     <View className="flex-1 bg-white">
       <Header title="My Accounts" showBack={true} />
 
-      {/* Search Bar */}
       <View className="px-5 pt-4 pb-2">
         <SearchBar 
           onSearch={setSearchQuery} 
@@ -153,34 +193,134 @@ export default function AccountsScreen() {
         />
       </View>
 
-      {/* Accounts List */}
       <ScrollView 
         className="flex-1" 
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 120 }}
       >
-        {filteredAccounts.length > 0 ? (
+        {isLoading ? (
+          <ActivityIndicator color="#6BCB77" className="mt-10" />
+        ) : filteredAccounts.length > 0 ? (
           filteredAccounts.map(account => (
             <AccountCard 
               key={account.id} 
               account={account} 
-              onPress={(acc) => router.push(`/account/${acc.id}`)}
+              onDetails={(acc) => router.push(`/account/${acc.id}`)}
+              onEdit={openModalForEdit}
+              onCancel={(acc) => handleDelete(acc.id)}
             />
           ))
         ) : (
           <View className="flex-1 items-center justify-center mt-20">
-            <Ionicons name="search-outline" size={64} color="#CBD5E1" />
-            <Text className="text-textMuted font-medium mt-4 text-center">
-              No accounts found matching "{searchQuery}"
+            <Ionicons name="wallet-outline" size={64} color="#CBD5E1" />
+            <Text className="text-gray-400 font-medium mt-4 text-center">
+              {searchQuery ? `No accounts found matching "${searchQuery}"` : "You haven't added any accounts yet."}
             </Text>
           </View>
         )}
       </ScrollView>
 
-      {/* Floating Add Button */}
       <FloatingActionButton 
         label="Add Account" 
-        onPress={() => console.log('Add Account')} 
+        onPress={openModalForAdd} 
+      />
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={closeModal}
+      >
+        <View className="flex-1 justify-end bg-black/50">
+          <View className="bg-white rounded-t-3xl p-6 h-[85%] shadow-lg">
+            <View className="flex-row justify-between items-center mb-6">
+              <Text className="text-2xl font-extrabold text-gray-800">
+                {editingId ? 'Edit Info' : 'Add New'}
+              </Text>
+              <TouchableOpacity onPress={closeModal} className="p-2 bg-gray-100 rounded-full">
+                <Ionicons name="close" size={24} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text className="text-gray-600 mb-2 font-semibold">Type</Text>
+              <View className="flex-row mb-6">
+                <TouchableOpacity 
+                  onPress={() => setType('bank')}
+                  className={`flex-1 p-3 items-center justify-center border border-gray-200 rounded-l-xl ${type === 'bank' ? 'bg-primary border-primary' : 'bg-gray-50'}`}
+                >
+                  <Text className={`font-bold ${type === 'bank' ? 'text-white' : 'text-gray-600'}`}>Bank Account</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={() => setType('card')}
+                  className={`flex-1 p-3 items-center justify-center border border-l-0 border-gray-200 rounded-r-xl ${type === 'card' ? 'bg-primary border-primary' : 'bg-gray-50'}`}
+                >
+                  <Text className={`font-bold ${type === 'card' ? 'text-white' : 'text-gray-600'}`}>Card</Text>
+                </TouchableOpacity>
+              </View>
+
+              <Text className="text-gray-600 mb-2 font-semibold">{type === 'bank' ? 'Bank Name' : 'Card Name'}</Text>
+              <TextInput
+                className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4 text-gray-800"
+                placeholder={type === 'bank' ? "e.g. Chase" : "e.g. Amex Platinum"}
+                value={name}
+                onChangeText={setName}
+              />
+
+              <Text className="text-gray-600 mb-2 font-semibold">Account Holder Name</Text>
+              <TextInput
+                className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4 text-gray-800"
+                placeholder="Name exactly as it appears"
+                value={holderName}
+                onChangeText={setHolderName}
+              />
+
+              <Text className="text-gray-600 mb-2 font-semibold">{type === 'bank' ? 'Account Number' : 'Card Number'}</Text>
+              <TextInput
+                className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4 text-gray-800"
+                placeholder="Full or Last 4 Digits"
+                keyboardType="numeric"
+                value={accountNumber}
+                onChangeText={setAccountNumber}
+              />
+
+              {type === 'card' && (
+                <>
+                  <Text className="text-gray-600 mb-2 font-semibold">Expiry Date (MM/YYYY)</Text>
+                  <TouchableOpacity 
+                    onPress={() => setPickerVisible(true)}
+                    className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4"
+                  >
+                    <Text className={`text-base ${expiryDate ? 'text-gray-800' : 'text-gray-400'}`}>
+                      {expiryDate || "Tap to select Expiry Date"}
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              )}
+
+              <TouchableOpacity 
+                onPress={handleAddOrEdit}
+                className="bg-primary rounded-2xl py-4 items-center shadow-sm shadow-primary/30 mt-4 mb-10"
+                disabled={addAccount.isPending || updateAccount.isPending}
+              >
+                {addAccount.isPending || updateAccount.isPending ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <Text className="text-white font-extrabold text-lg tracking-wide">
+                    {editingId ? 'Save Changes' : 'Save'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      <CustomMonthYearPicker 
+        visible={pickerVisible}
+        currentDate={expiryDate}
+        onClose={() => setPickerVisible(false)}
+        onSelect={setExpiryDate}
       />
     </View>
   );

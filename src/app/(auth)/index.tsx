@@ -27,7 +27,7 @@ export default function Login() {
     if (success) {
       router.push('/(auth)/verify');
     } else {
-      setError("Invalid number. Use 9999999999");
+      setError("Mock mode: Use any valid format phone number.");
     }
   };
 

@@ -7,18 +7,14 @@ import Header from '../../components/common/Header';
 import TransactionCard from '../../components/cards/TransactionCard';
 import { Account, Transaction } from '../../types';
 
-const FULL_ACCOUNTS: Account[] = [
-  { id: '1', name: 'Chase Checking', last4: '4589', balance: 5420.50, logoName: 'card', logoBgColor: 'bg-blue-700' },
-  { id: '2', name: 'Wells Fargo Savings', last4: '1102', balance: 12500.00, logoName: 'business', logoBgColor: 'bg-red-700' },
-  { id: '3', name: 'PayPal Wallet', last4: 'paypal', balance: 340.25, logoName: 'logo-paypal', logoBgColor: 'bg-sky-500' },
-  { id: '4', name: 'Apple Card', last4: '9901', balance: -425.00, logoName: 'logo-apple', logoBgColor: 'bg-slate-800' },
-  { id: '5', name: 'Robinhood Investing', last4: 'rob1', balance: 8950.40, logoName: 'trending-up', logoBgColor: 'bg-green-600' },
-  { id: '6', name: 'Bank of America', last4: '2022', balance: 3150.00, logoName: 'cash', logoBgColor: 'bg-red-600' },
-];
+import { useAccounts } from '../../api/accounts';
 
 export default function AccountDetailScreen() {
   const { id } = useLocalSearchParams();
-  const account = FULL_ACCOUNTS.find(a => a.id === id) || FULL_ACCOUNTS[0];
+  const { data: accounts } = useAccounts();
+  const account = accounts?.find(a => a.id.toString() === id);
+
+  if (!account) return null;
 
   const [isBalanceVisible, setIsBalanceVisible] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -141,16 +137,34 @@ export default function AccountDetailScreen() {
             </TouchableOpacity>
           </View>
 
-          <View className={`w-20 h-20 rounded-3xl items-center justify-center mb-4 shadow-sm shadow-slate-300 mt-6 ${account.logoBgColor}`}>
-            <Ionicons name={account.logoName as any} size={40} color="#FFF" />
-          </View>
-          <Text className="text-2xl font-extrabold text-slate-800 mb-1 text-center">{account.name}</Text>
-          <Text className="text-sm font-medium text-slate-400 tracking-[0.2em] mb-4">**** **** **** {account.last4}</Text>
+          {(() => {
+            const last4 = account.account_number ? account.account_number.slice(-4) : '****';
+            let logoName: any = 'business';
+            let logoBgColor = 'bg-blue-700';
+
+            if (account.type === 'card') {
+              logoName = 'card';
+              logoBgColor = 'bg-slate-800';
+            } else if (account.type === 'wallet') {
+              logoName = 'wallet';
+              logoBgColor = 'bg-emerald-600';
+            }
+
+            return (
+              <>
+                <View className={`w-20 h-20 rounded-3xl items-center justify-center mb-4 shadow-sm shadow-slate-300 mt-6 ${logoBgColor}`}>
+                  <Ionicons name={logoName} size={40} color="#FFF" />
+                </View>
+                <Text className="text-2xl font-extrabold text-slate-800 mb-1 text-center">{account.name}</Text>
+                <Text className="text-sm font-medium text-slate-400 tracking-[0.2em] mb-4">**** **** **** {last4}</Text>
+              </>
+            );
+          })()}
           
           {/* Balance */}
           {isBalanceVisible ? (
             <Text className="text-4xl font-extrabold text-primary">
-              ${account.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              $0.00
             </Text>
           ) : (
             <Text className="text-4xl font-extrabold text-slate-400 tracking-widest">
@@ -170,11 +184,18 @@ export default function AccountDetailScreen() {
         </TouchableOpacity>
 
         {/* Transaction History */}
-        <Text className="text-base font-extrabold text-slate-800 mb-4 ml-1">Recent Transactions</Text>
-        <View className="bg-white rounded-3xl p-5 shadow-sm shadow-slate-100 border border-slate-100">
-          {pastTransactions.map((tx) => (
-            <TransactionCard key={tx.id} transaction={tx} />
-          ))}
+        <View className="flex-row justify-between items-center mb-4 px-1">
+          <Text className="text-base font-extrabold text-slate-800">Recent Transactions</Text>
+          <TouchableOpacity className="bg-primary/10 px-3 py-1.5 rounded-full flex-row items-center">
+            <Ionicons name="sync" size={14} color="#6BCB77" />
+            <Text className="text-primary font-bold text-xs ml-1">Fetch (30 Days)</Text>
+          </TouchableOpacity>
+        </View>
+        
+        <View className="bg-white rounded-3xl p-8 items-center justify-center shadow-sm shadow-slate-100 border border-slate-200 border-dashed">
+          <Ionicons name="receipt-outline" size={48} color="#CBD5E1" />
+          <Text className="text-slate-400 font-medium text-center mt-3">No transactions synced yet.</Text>
+          <Text className="text-slate-400 text-xs text-center mt-1">Tap fetch to sync recent history.</Text>
         </View>
 
       </ScrollView>

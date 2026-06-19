@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,15 +7,8 @@ import CustomSwitch from '../../components/common/CustomSwitch';
 import Header from '../../components/common/Header';
 import TransactionCard from '../../components/cards/TransactionCard';
 
-// Dummy data matching subscriptions.tsx
-const DUMMY_SUBSCRIPTIONS: Subscription[] = [
-  { id: '1', name: 'Netflix', price: 15.99, billingCycle: 'monthly', iconName: 'play', iconBgColor: 'bg-red-600', nextBillingDate: 'Nov 12' },
-  { id: '2', name: 'Spotify', price: 9.99, billingCycle: 'monthly', iconName: 'musical-notes', iconBgColor: 'bg-green-500', nextBillingDate: 'Nov 15' },
-  { id: '3', name: 'Amazon Prime', price: 139.00, billingCycle: 'yearly', iconName: 'cart', iconBgColor: 'bg-blue-500', nextBillingDate: 'Jan 22, 2024' },
-  { id: '4', name: 'Gym Membership', price: 45.00, billingCycle: 'monthly', iconName: 'barbell', iconBgColor: 'bg-slate-800', nextBillingDate: 'Nov 01' },
-  { id: '5', name: 'iCloud Storage', price: 2.99, billingCycle: 'monthly', iconName: 'cloud', iconBgColor: 'bg-blue-400', nextBillingDate: 'Nov 05' },
-  { id: '6', name: 'Adobe Creative Cloud', price: 54.99, billingCycle: 'monthly', iconName: 'color-palette', iconBgColor: 'bg-red-500', nextBillingDate: 'Nov 18' },
-];
+import { useSubscriptionDetails, useUpdateSubscription } from '../../api/subscriptions';
+import { useCategories } from '../../api/categories';
 
 export default function SubscriptionDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -23,47 +16,67 @@ export default function SubscriptionDetailScreen() {
 
   const [isReminderOn, setIsReminderOn] = useState(false);
   const [reminderDays, setReminderDays] = useState(3);
-  const [isDaily, setIsDaily] = useState(false);
+  const [isSmsEnabled, setIsSmsEnabled] = useState(false);
+  const [isEmailEnabled, setIsEmailEnabled] = useState(true);
 
-  const subscription = DUMMY_SUBSCRIPTIONS.find(s => s.id === id) || DUMMY_SUBSCRIPTIONS[0];
+  const { data, isLoading, isError } = useSubscriptionDetails(id as string);
+  const { data: categories } = useCategories();
+  const updateSub = useUpdateSubscription();
 
-  // Dummy Extended Data
-  const startedDate = 'March 14, 2022';
-  const source = 'Manual Added';
-
-  // Dummy Transactions for this subscription
-  const pastTransactions = [
-    {
-      id: 'tx1',
-      title: subscription.name,
-      subtitle: 'Auto-Payment',
-      amount: -subscription.price,
-      type: 'expense' as const,
-      date: '2023-10-12',
-      iconName: subscription.iconName,
-      iconBgColor: subscription.iconBgColor
-    },
-    {
-      id: 'tx2',
-      title: subscription.name,
-      subtitle: 'Auto-Payment',
-      amount: -subscription.price,
-      type: 'expense' as const,
-      date: '2023-09-12',
-      iconName: subscription.iconName,
-      iconBgColor: subscription.iconBgColor
-    },
-    {
-      id: 'tx3',
-      title: subscription.name,
-      subtitle: 'Auto-Payment',
-      amount: -subscription.price,
-      type: 'expense' as const,
-      date: '2023-08-12',
-      iconName: subscription.iconName,
-      iconBgColor: subscription.iconBgColor
+  useEffect(() => {
+    if (data?.subscription) {
+      setIsReminderOn(!!data.subscription.is_reminder_on);
+      setReminderDays(data.subscription.reminder_days || 3);
+      setIsSmsEnabled(!!data.subscription.is_sms_enabled);
+      setIsEmailEnabled(data.subscription.is_email_enabled !== undefined ? !!data.subscription.is_email_enabled : true);
     }
-  ];
+  }, [data?.subscription]);
+
+  const handleToggleReminder = async (val: boolean) => {
+    setIsReminderOn(val);
+    await updateSub.mutateAsync({ id: Number(id), is_reminder_on: val });
+  };
+
+  const handleUpdateDays = async (newDays: number) => {
+    setReminderDays(newDays);
+    await updateSub.mutateAsync({ id: Number(id), reminder_days: newDays });
+  };
+
+  const handleToggleSms = async (val: boolean) => {
+    setIsSmsEnabled(val);
+    await updateSub.mutateAsync({ id: Number(id), is_sms_enabled: val });
+  };
+
+  const handleToggleEmail = async (val: boolean) => {
+    setIsEmailEnabled(val);
+    await updateSub.mutateAsync({ id: Number(id), is_email_enabled: val });
+  };
+
+  if (isLoading) {
+    return (
+      <View className="flex-1 bg-slate-50 items-center justify-center">
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
+
+  if (isError || !data?.subscription) {
+    return (
+      <View className="flex-1 bg-slate-50 items-center justify-center">
+        <Text className="text-red-500">Failed to load details.</Text>
+      </View>
+    );
+  }
+
+  const subscription = data.subscription;
+  const transactions = data.transactions || [];
+
+  const startedDate = subscription.start_date.split('T')[0];
+  const nextBillingDate = subscription.next_billing_date.split('T')[0];
+  const source = subscription.source || 'Manual Added';
+
+  const category = categories?.find(c => parseInt(c.id.toString()) === subscription.category_id);
+  const categoryName = category ? category.name : 'Uncategorized';
 
   return (
     <View className="flex-1 bg-slate-50">
@@ -73,12 +86,12 @@ export default function SubscriptionDetailScreen() {
         
         {/* Top Banner / Logo */}
         <View className="items-center bg-white rounded-3xl p-8 mb-6 shadow-sm shadow-slate-100 border border-slate-100">
-          <View className={`w-20 h-20 rounded-3xl items-center justify-center mb-4 shadow-sm shadow-slate-300 ${subscription.iconBgColor}`}>
-            <Ionicons name={subscription.iconName as any} size={40} color="#FFF" />
+          <View className={`w-20 h-20 rounded-3xl items-center justify-center mb-4 shadow-sm shadow-slate-300 bg-primary/20`}>
+            <Ionicons name="play-circle" size={40} color="#6BCB77" />
           </View>
           <Text className="text-2xl font-extrabold text-slate-800 mb-1">{subscription.name}</Text>
           <Text className="text-3xl font-extrabold text-slate-800 mt-2">
-            ${subscription.price.toFixed(2)}<Text className="text-lg text-slate-400 font-bold">{subscription.billingCycle === 'monthly' ? '/mo' : '/yr'}</Text>
+            ${parseFloat(subscription.amount).toFixed(2)}<Text className="text-lg text-slate-400 font-bold">{subscription.billing_cycle === 'monthly' ? '/mo' : '/yr'}</Text>
           </Text>
         </View>
 
@@ -103,7 +116,7 @@ export default function SubscriptionDetailScreen() {
               </View>
               <Text className="text-sm font-bold text-slate-500">Next Bill</Text>
             </View>
-            <Text className="text-sm font-extrabold text-slate-800">{subscription.nextBillingDate}</Text>
+            <Text className="text-sm font-extrabold text-slate-800">{nextBillingDate}</Text>
           </View>
 
           <View className="flex-row justify-between items-center py-3 border-b border-slate-50">
@@ -113,7 +126,7 @@ export default function SubscriptionDetailScreen() {
               </View>
               <Text className="text-sm font-bold text-slate-500">Billing Cycle</Text>
             </View>
-            <Text className="text-sm font-extrabold text-slate-800 capitalize">{subscription.billingCycle}</Text>
+            <Text className="text-sm font-extrabold text-slate-800 capitalize">{subscription.billing_cycle}</Text>
           </View>
 
           <View className="flex-row justify-between items-center py-3 border-b border-slate-50">
@@ -126,6 +139,16 @@ export default function SubscriptionDetailScreen() {
             <Text className="text-sm font-extrabold text-slate-800">{source}</Text>
           </View>
 
+          <View className="flex-row justify-between items-center py-3 border-b border-slate-50">
+            <View className="flex-row items-center">
+              <View className="w-8 h-8 rounded-full bg-indigo-50 items-center justify-center mr-3">
+                <Ionicons name="folder-open-outline" size={16} color="#6366F1" />
+              </View>
+              <Text className="text-sm font-bold text-slate-500">Category</Text>
+            </View>
+            <Text className="text-sm font-extrabold text-slate-800">{categoryName}</Text>
+          </View>
+
           {/* Reminder Toggle */}
           <View className={`flex-row justify-between items-center py-3 ${isReminderOn ? '' : ''}`}>
             <View className="flex-row items-center">
@@ -136,7 +159,7 @@ export default function SubscriptionDetailScreen() {
             </View>
             <CustomSwitch 
               value={isReminderOn} 
-              onValueChange={setIsReminderOn} 
+              onValueChange={handleToggleReminder} 
             />
           </View>
 
@@ -147,14 +170,14 @@ export default function SubscriptionDetailScreen() {
                 <Text className="text-sm font-bold text-slate-700">Days Before Expiry</Text>
                 <View className="flex-row items-center">
                   <TouchableOpacity 
-                    onPress={() => setReminderDays(Math.max(1, reminderDays - 1))} 
+                    onPress={() => handleUpdateDays(Math.max(1, reminderDays - 1))} 
                     className="w-8 h-8 bg-white rounded-full items-center justify-center border border-slate-200 shadow-sm"
                   >
                     <Ionicons name="remove" size={16} color="#0F172A" />
                   </TouchableOpacity>
                   <Text className="text-base font-extrabold mx-4 w-6 text-center text-slate-800">{reminderDays}</Text>
                   <TouchableOpacity 
-                    onPress={() => setReminderDays(Math.min(30, reminderDays + 1))} 
+                    onPress={() => handleUpdateDays(Math.min(30, reminderDays + 1))} 
                     className="w-8 h-8 bg-white rounded-full items-center justify-center border border-slate-200 shadow-sm"
                   >
                     <Ionicons name="add" size={16} color="#0F172A" />
@@ -162,11 +185,26 @@ export default function SubscriptionDetailScreen() {
                 </View>
               </View>
 
-              <View className="flex-row justify-between items-center">
-                <Text className="text-sm font-bold text-slate-700">Repeat Daily</Text>
+              <View className="flex-row justify-between items-center mb-3 border-t border-slate-200/60 pt-3">
+                <View className="flex-row items-center">
+                  <Ionicons name="chatbubble-ellipses-outline" size={16} color="#64748B" className="mr-2" />
+                  <Text className="text-sm font-bold text-slate-700">SMS Notification</Text>
+                </View>
                 <CustomSwitch 
-                  value={isDaily} 
-                  onValueChange={setIsDaily} 
+                  value={isSmsEnabled} 
+                  onValueChange={handleToggleSms} 
+                  style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
+                />
+              </View>
+              
+              <View className="flex-row justify-between items-center">
+                <View className="flex-row items-center">
+                  <Ionicons name="mail-outline" size={16} color="#64748B" className="mr-2" />
+                  <Text className="text-sm font-bold text-slate-700">Email Notification</Text>
+                </View>
+                <CustomSwitch 
+                  value={isEmailEnabled} 
+                  onValueChange={handleToggleEmail} 
                   style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
                 />
               </View>
@@ -177,7 +215,18 @@ export default function SubscriptionDetailScreen() {
 
         {/* Pay Button */}
         <TouchableOpacity 
-          onPress={() => Alert.alert('Pay', `Initiating payment of $${subscription.price.toFixed(2)} for ${subscription.name}...`)}
+          onPress={() => {
+            router.push({
+              pathname: '/add',
+              params: {
+                subscription_id: subscription.id,
+                title: subscription.name,
+                amount: subscription.amount.toString(),
+                category_id: subscription.category_id || '',
+                is_subscription_pay: 'true'
+              }
+            });
+          }}
           activeOpacity={0.8}
           className="bg-primary rounded-full py-4 items-center shadow-sm shadow-primary/30 mb-8 mx-1"
         >
@@ -187,12 +236,49 @@ export default function SubscriptionDetailScreen() {
         {/* Transaction History */}
         <Text className="text-base font-extrabold text-slate-800 mb-4 ml-1">Payment History</Text>
         <View className="bg-white rounded-3xl p-5 shadow-sm shadow-slate-100 border border-slate-100">
-          {pastTransactions.map((tx) => (
-            <TransactionCard key={tx.id} transaction={tx} />
-          ))}
+          {transactions.length === 0 ? (
+            <Text className="text-slate-500 text-center py-4">No transactions yet.</Text>
+          ) : (
+            transactions.map((tx: any) => (
+              <TransactionCard 
+                key={tx.id} 
+                transaction={{
+                  id: tx.id.toString(),
+                  title: tx.title,
+                  subtitle: tx.subtitle,
+                  amount: parseFloat(tx.amount),
+                  type: tx.type,
+                  date: tx.date.split('T')[0],
+                  iconName: 'play-circle',
+                  iconBgColor: 'bg-primary/20'
+                }} 
+              />
+            ))
+          )}
         </View>
 
       </ScrollView>
+
+      {/* Floating Edit Button (Bottom Left) */}
+      <TouchableOpacity 
+        onPress={() => {
+          router.push({
+            pathname: '/edit-subscription',
+            params: {
+              id: subscription.id,
+              name: subscription.name,
+              amount: subscription.amount.toString(),
+              billingCycle: subscription.billing_cycle,
+              startDate: subscription.start_date.split('T')[0],
+              categoryId: subscription.category_id || ''
+            }
+          });
+        }}
+        activeOpacity={0.8}
+        className="absolute bottom-6 left-6 w-14 h-14 bg-slate-800 rounded-full items-center justify-center shadow-lg shadow-slate-800/40"
+      >
+        <Ionicons name="pencil" size={24} color="#FFF" />
+      </TouchableOpacity>
     </View>
   );
 }

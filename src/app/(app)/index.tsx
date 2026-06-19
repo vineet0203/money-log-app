@@ -1,103 +1,22 @@
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../store/authStore';
+import { useSubscriptions } from '../../api/subscriptions';
+import { useAccounts } from '../../api/accounts';
 import WelcomeCard from '../../components/homescreen/WelcomeCard';
 import StatsCard from '../../components/homescreen/StatsCard';
 import SubscriptionCard from '../../components/cards/SubscriptionCard';
 import AccountCard from '../../components/cards/AccountCard';
 import BillCard from '../../components/cards/BillCard';
-import { Subscription, Account, Bill } from '../../types';
-
-const DUMMY_SUBSCRIPTIONS: Subscription[] = [
-  {
-    id: '1',
-    name: 'Netflix',
-    price: 15.99,
-    billingCycle: 'monthly',
-    iconName: 'play',
-    iconBgColor: 'bg-red-600',
-    nextBillingDate: 'Oct 24'
-  },
-  {
-    id: '2',
-    name: 'Spotify',
-    price: 9.99,
-    billingCycle: 'monthly',
-    iconName: 'musical-notes',
-    iconBgColor: 'bg-green-500',
-    nextBillingDate: 'Oct 28'
-  },
-  {
-    id: '3',
-    name: 'Adobe Creative Cloud',
-    price: 54.99,
-    billingCycle: 'monthly',
-    iconName: 'color-palette',
-    iconBgColor: 'bg-blue-600',
-    nextBillingDate: 'Nov 02'
-  }
-];
-
-const DUMMY_ACCOUNTS: Account[] = [
-  {
-    id: '1',
-    name: 'Chase Checking',
-    last4: '4589',
-    balance: 5420.50,
-    logoName: 'card',
-    logoBgColor: 'bg-blue-700'
-  },
-  {
-    id: '2',
-    name: 'Wells Fargo Savings',
-    last4: '1102',
-    balance: 12500.00,
-    logoName: 'business',
-    logoBgColor: 'bg-red-700'
-  },
-  {
-    id: '3',
-    name: 'PayPal Wallet',
-    last4: 'paypal',
-    balance: 340.25,
-    logoName: 'logo-paypal',
-    logoBgColor: 'bg-blue-600'
-  }
-];
-
-const DUMMY_BILLS: Bill[] = [
-  {
-    id: '1',
-    name: 'Electricity Bill',
-    amount: 145.20,
-    dueDate: 'Oct 28',
-    status: 'upcoming',
-    iconName: 'flash',
-    iconBgColor: 'bg-orange-500'
-  },
-  {
-    id: '2',
-    name: 'Internet (Comcast)',
-    amount: 89.99,
-    dueDate: 'Oct 30',
-    status: 'upcoming',
-    iconName: 'wifi',
-    iconBgColor: 'bg-blue-500'
-  },
-  {
-    id: '3',
-    name: 'Car Insurance',
-    amount: 210.00,
-    dueDate: 'Nov 05',
-    status: 'upcoming',
-    iconName: 'car',
-    iconBgColor: 'bg-red-600'
-  }
-];
 
 export default function Home() {
   const { phoneNumber } = useAuthStore();
   const router = useRouter();
+  
+  // Fetch data
+  const { data: subscriptions, isLoading: isLoadingSubs } = useSubscriptions({ limit: 3 });
+  const { data: accounts, isLoading: isLoadingAccounts } = useAccounts();
+  const { data: upcomingBills, isLoading: isLoadingBills } = useSubscriptions({ upcomingDays: 15, limit: 3 });
 
   return (
     <View className="flex-1 bg-white">
@@ -113,35 +32,7 @@ export default function Home() {
           income={3200.00} 
           expense={1450.75} 
         />
-        
-        {/* My Accounts Section */}
-        <View className="flex-row justify-between items-end mt-6 mb-3">
-          <Text className="text-lg font-extrabold text-text">My Accounts</Text>
-          <TouchableOpacity onPress={() => router.push('/accounts')}>
-            <Text className="text-primary font-bold text-sm">See All</Text>
-          </TouchableOpacity>
-        </View>
 
-        {DUMMY_ACCOUNTS.slice(0, 3).map(account => (
-          <AccountCard 
-            key={account.id} 
-            account={account} 
-            onPress={(acc) => router.push(`/account/${acc.id}`)}
-          />
-        ))}
-
-        {/* Upcoming Bills Section */}
-        <View className="flex-row justify-between items-end mt-6 mb-3">
-          <Text className="text-lg font-extrabold text-text">Upcoming Bills</Text>
-          <TouchableOpacity onPress={() => router.push('/bills')}>
-            <Text className="text-primary font-bold text-sm">See All</Text>
-          </TouchableOpacity>
-        </View>
-
-        {DUMMY_BILLS.map(bill => (
-          <BillCard key={bill.id} bill={bill} />
-        ))}
-        
         {/* Subscriptions Section Header */}
         <View className="flex-row justify-between items-end mt-6 mb-3">
           <Text className="text-lg font-extrabold text-text">Active Subscriptions</Text>
@@ -151,13 +42,86 @@ export default function Home() {
         </View>
 
         {/* Subscriptions List (Top 3) */}
-        {DUMMY_SUBSCRIPTIONS.slice(0, 3).map((sub) => (
-          <SubscriptionCard 
-            key={sub.id} 
-            subscription={sub} 
-            onPress={(s) => router.push(`/subscription/${s.id}`)}
-          />
-        ))}
+        {isLoadingSubs ? (
+          <ActivityIndicator color="#6BCB77" className="my-4" />
+        ) : subscriptions && subscriptions.length > 0 ? (
+          subscriptions.map((sub) => (
+            <SubscriptionCard 
+              key={sub.id} 
+              subscription={{
+                id: sub.id.toString(),
+                name: sub.name,
+                price: parseFloat(sub.amount.toString()),
+                billingCycle: sub.billing_cycle,
+                iconName: 'play-circle',
+                iconBgColor: 'bg-primary/20',
+                nextBillingDate: sub.next_billing_date.split('T')[0]
+              }} 
+              showActions={false}
+              onPress={() => router.push(`/subscription/${sub.id}`)}
+            />
+          ))
+        ) : (
+          <View className="bg-gray-50 rounded-xl p-6 items-center justify-center border border-gray-100 border-dashed mt-2">
+            <Text className="text-gray-400 text-center mb-2">No active subscriptions yet.</Text>
+            <TouchableOpacity onPress={() => router.push('/subscriptions')}>
+              <Text className="text-primary font-bold">Add Subscription</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        
+        {/* My Accounts Section */}
+        <View className="flex-row justify-between items-end mt-6 mb-3">
+          <Text className="text-lg font-extrabold text-text">My Accounts</Text>
+          <TouchableOpacity onPress={() => router.push('/accounts')}>
+            <Text className="text-primary font-bold text-sm">See All</Text>
+          </TouchableOpacity>
+        </View>
+
+        {isLoadingAccounts ? (
+          <ActivityIndicator color="#6BCB77" className="my-4" />
+        ) : accounts && accounts.length > 0 ? (
+          accounts.slice(0, 3).map(account => (
+            <AccountCard 
+              key={account.id} 
+              account={account} 
+              showActions={false}
+              onPress={(acc) => router.push(`/account/${acc.id}`)}
+            />
+          ))
+        ) : (
+          <View className="bg-gray-50 rounded-xl p-6 items-center justify-center border border-gray-100 border-dashed mt-2">
+            <Text className="text-gray-400 text-center mb-2">No accounts added yet.</Text>
+            <TouchableOpacity onPress={() => router.push('/accounts')}>
+              <Text className="text-primary font-bold">Add Account</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Upcoming Bills Section */}
+        <View className="flex-row justify-between items-end mt-6 mb-3">
+          <Text className="text-lg font-extrabold text-text">Upcoming Bills</Text>
+          <TouchableOpacity onPress={() => router.push('/bills')}>
+            <Text className="text-primary font-bold text-sm">See All</Text>
+          </TouchableOpacity>
+        </View>
+
+        {isLoadingBills ? (
+          <ActivityIndicator color="#6BCB77" className="my-4" />
+        ) : upcomingBills && upcomingBills.length > 0 ? (
+          upcomingBills.map(bill => (
+            <BillCard 
+              key={bill.id} 
+              subscription={bill} 
+              onPress={(b) => router.push(`/subscription/${b.id}`)} 
+            />
+          ))
+        ) : (
+          <View className="bg-gray-50 rounded-xl p-6 items-center justify-center border border-gray-100 border-dashed mt-2">
+            <Text className="text-gray-400 text-center mb-2">No bills due in the next 15 days!</Text>
+          </View>
+        )}
+        
       </ScrollView>
     </View>
   );

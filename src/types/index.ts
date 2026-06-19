@@ -18,6 +18,7 @@ export interface Subscription {
   billingCycle: 'monthly' | 'yearly';
   iconName: any; // Ionicons name
   iconBgColor: string; // Tailwind color string
+  iconColor?: string; // Hex color string
   nextBillingDate: string; // e.g., 'Oct 24'
 }
 

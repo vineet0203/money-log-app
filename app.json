@@ -16,7 +16,8 @@
         "backgroundColor": "#FFFFFF"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.moneylog.app"
+      "package": "com.moneylog.app",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "output": "static"

@@ -48,13 +48,17 @@ export default function Verify() {
 
     setError("");
     setLoading(true);
-    const success = await verifyOtp(fullCode);
+    const result = await verifyOtp(fullCode);
     setLoading(false);
 
-    if (success) {
-      router.replace('/(app)');
+    if (result.success) {
+      if (result.isProfileComplete) {
+        router.replace('/(app)');
+      } else {
+        router.replace('/(auth)/profile-setup');
+      }
     } else {
-      setError("Invalid code. Use 123456");
+      setError("Invalid code. Please try again.");
     }
   };
 

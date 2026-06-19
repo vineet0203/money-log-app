@@ -25,7 +25,10 @@ export default function TransactionCard({ transaction, onPress }: TransactionCar
       className="flex-row items-center bg-white py-4 border-b border-slate-100"
     >
       {/* Icon Area */}
-      <View className={`w-12 h-12 rounded-2xl items-center justify-center mr-4 ${iconBgColor}`}>
+      <View 
+        className={`w-12 h-12 rounded-2xl items-center justify-center mr-4 ${iconBgColor?.startsWith('bg-') ? iconBgColor : ''}`}
+        style={iconBgColor?.startsWith('#') ? { backgroundColor: iconBgColor } : {}}
+      >
         <Ionicons name={iconName} size={24} color="#FFF" />
       </View>
 

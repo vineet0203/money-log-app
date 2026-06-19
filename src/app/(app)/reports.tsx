@@ -1,88 +1,134 @@
-import React, { useState } from 'react';
-import { View, ScrollView, Text } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { PieChart } from 'react-native-gifted-charts';
-import MonthYearFilter from '../../components/reportscreen/MonthYearFilter';
-import ReportSummaryCard from '../../components/reportscreen/ReportSummaryCard';
+import { useMonthlyReport } from '../../api/reports';
 
-export default function Reports() {
-  const [currentDate, setCurrentDate] = useState(new Date());
+export default function ReportsScreen() {
+  const { data, isLoading, isError } = useMonthlyReport();
 
-  // Dummy data
-  const income = 5240.00;
-  const incomeChangePercentage = -2.5; // income decreased 2.5%
-  const expense = 3120.50;
-  const expenseChangePercentage = 12.5; // expenses increased 12.5%
+  if (isLoading) {
+    return (
+      <View className="flex-1 bg-slate-50 items-center justify-center">
+        <ActivityIndicator size="large" color="#6BCB77" />
+      </View>
+    );
+  }
 
-  const pieData = [
-    { value: 1500, color: '#3B82F6', text: '48%', title: 'Housing' },     // blue
-    { value: 850, color: '#F97316', text: '27%', title: 'Food' },        // orange
-    { value: 320.5, color: '#A855F7', text: '10%', title: 'Transport' },   // purple
-    { value: 450, color: '#10B981', text: '15%', title: 'Other' },       // emerald
-  ];
+  if (isError || !data) {
+    return (
+      <View className="flex-1 bg-slate-50 items-center justify-center">
+        <Text className="text-red-500 font-bold">Failed to load reports.</Text>
+      </View>
+    );
+  }
+
+  const { totalIncome, totalExpense, categoryBreakdown } = data;
+
+  // Format data for Gifted Charts
+  const pieData = categoryBreakdown.map(cat => ({
+    value: cat.total_amount,
+    color: cat.category_color,
+    text: `${Math.round((cat.total_amount / totalExpense) * 100)}%`
+  }));
 
   return (
     <View className="flex-1 bg-slate-50">
-      {/* Month & Year Filter */}
-      <MonthYearFilter 
-        currentDate={currentDate} 
-        onChange={setCurrentDate} 
-      />
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        
+        {/* Month Selector Header */}
+        <View className="flex-row items-center justify-between px-6 py-5 bg-white border-b border-slate-100">
+          <Ionicons name="chevron-back" size={24} color="#64748B" />
+          <Text className="text-lg font-bold text-slate-800">This Month</Text>
+          <Ionicons name="chevron-forward" size={24} color="#CBD5E1" />
+        </View>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
-        {/* Summary Card */}
-        <ReportSummaryCard 
-          income={income} 
-          incomeChangePercentage={incomeChangePercentage}
-          expense={expense} 
-          expenseChangePercentage={expenseChangePercentage}
-        />
-
-        {/* Interactive Pie Chart & Legend */}
-        <View className="bg-white rounded-3xl p-6 mx-5 mb-8 border border-slate-100 shadow-sm shadow-slate-100 items-center justify-center">
-          <Text className="text-base font-extrabold text-text mb-6 self-start">Expense Distribution</Text>
+        {/* Overview Cards */}
+        <View className="flex-row px-5 py-6">
+          <View className="flex-1 bg-white p-4 rounded-2xl mr-2 shadow-sm shadow-slate-100 border border-slate-100">
+            <View className="flex-row items-center mb-2">
+              <View className="w-6 h-6 rounded-full bg-green-100 items-center justify-center mr-2">
+                <Ionicons name="arrow-down" size={14} color="#22C55E" />
+              </View>
+              <Text className="text-xs font-bold text-slate-500 uppercase tracking-wide">Income</Text>
+            </View>
+            <Text className="text-2xl font-extrabold text-slate-800">${totalIncome.toFixed(2)}</Text>
+          </View>
           
-          <View className="mb-4">
+          <View className="flex-1 bg-white p-4 rounded-2xl ml-2 shadow-sm shadow-slate-100 border border-slate-100">
+            <View className="flex-row items-center mb-2">
+              <View className="w-6 h-6 rounded-full bg-red-100 items-center justify-center mr-2">
+                <Ionicons name="arrow-up" size={14} color="#EF4444" />
+              </View>
+              <Text className="text-xs font-bold text-slate-500 uppercase tracking-wide">Expense</Text>
+            </View>
+            <Text className="text-2xl font-extrabold text-slate-800">${totalExpense.toFixed(2)}</Text>
+          </View>
+        </View>
+
+        {/* Pie Chart */}
+        {categoryBreakdown.length > 0 ? (
+          <View className="items-center justify-center py-6">
             <PieChart
               data={pieData}
               donut
               showText
-              textColor="white"
-              radius={110}
-              innerRadius={65}
+              textColor="black"
+              radius={120}
+              innerRadius={70}
               textSize={12}
-              focusOnPress
-              centerLabelComponent={() => {
-                return (
-                  <View className="items-center justify-center">
-                    <Text className="text-xl font-extrabold text-slate-800">
-                      ${expense.toLocaleString('en-US', { minimumFractionDigits: 0 })}
-                    </Text>
-                    <Text className="text-xs font-bold text-slate-400 mt-0.5">Total</Text>
-                  </View>
-                );
-              }}
+              centerLabelComponent={() => (
+                <View className="items-center justify-center">
+                  <Text className="text-xs font-bold text-slate-400">Total</Text>
+                  <Text className="text-xl font-extrabold text-slate-800">${totalExpense.toFixed(0)}</Text>
+                </View>
+              )}
             />
           </View>
+        ) : (
+          <View className="items-center justify-center py-12">
+            <Ionicons name="pie-chart-outline" size={64} color="#CBD5E1" />
+            <Text className="text-slate-400 font-medium mt-4">No expenses this month</Text>
+          </View>
+        )}
 
-          {/* Legend */}
-          <View className="w-full mt-4">
-            {pieData.map((item, index) => (
-              <View key={index} className="flex-row items-center justify-between py-3 border-b border-slate-50 last:border-0">
-                <View className="flex-row items-center">
-                  <View style={{ backgroundColor: item.color }} className="w-4 h-4 rounded-full mr-3" />
-                  <Text className="text-sm font-bold text-slate-700">{item.title}</Text>
-                </View>
-                <View className="flex-row items-center">
-                  <Text className="text-sm font-extrabold text-slate-800 mr-2">
-                    ${item.value.toLocaleString('en-US', { minimumFractionDigits: 0 })}
+        {/* Breakdown List */}
+        <View className="px-5 pb-10">
+          <Text className="text-sm font-extrabold text-slate-800 mb-4">Spending Breakdown</Text>
+          
+          {categoryBreakdown.map(cat => {
+            const percentage = totalExpense > 0 ? Math.round((cat.total_amount / totalExpense) * 100) : 0;
+            return (
+              <View key={cat.category_id} className="bg-white p-4 rounded-2xl mb-3 shadow-sm shadow-slate-100 border border-slate-100">
+                <View className="flex-row items-center justify-between mb-3">
+                  <View className="flex-row items-center">
+                    <View className="w-10 h-10 rounded-xl items-center justify-center mr-3" style={{ backgroundColor: cat.category_color + '20' }}>
+                      <Ionicons name={cat.icon_name as any} size={20} color={cat.category_color} />
+                    </View>
+                    <View>
+                      <Text className="text-base font-bold text-slate-800">{cat.category_name}</Text>
+                      <Text className="text-xs font-bold text-slate-400">{percentage}% of total</Text>
+                    </View>
+                  </View>
+                  <Text className="text-base font-extrabold text-slate-800">
+                    ${cat.total_amount.toFixed(2)}
                   </Text>
-                  <Text className="text-xs font-bold text-slate-400 w-10 text-right">{item.text}</Text>
+                </View>
+
+                {/* Progress Bar */}
+                <View className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                  <View 
+                    className="h-full rounded-full" 
+                    style={{ 
+                      backgroundColor: cat.category_color,
+                      width: `${percentage}%`
+                    }} 
+                  />
                 </View>
               </View>
-            ))}
-          </View>
-
+            );
+          })}
         </View>
+
       </ScrollView>
     </View>
   );
