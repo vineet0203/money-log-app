@@ -96,9 +96,25 @@ export default function ReportsScreen() {
           <Text className="text-sm font-extrabold text-slate-800 mb-4">Spending Breakdown</Text>
           
           {categoryBreakdown.map(cat => {
-            const percentage = totalExpense > 0 ? Math.round((cat.total_amount / totalExpense) * 100) : 0;
+            const hasBudget = cat.budget_limit && cat.budget_limit > 0;
+            const percentage = hasBudget 
+              ? Math.round((cat.total_amount / cat.budget_limit!) * 100)
+              : (totalExpense > 0 ? Math.round((cat.total_amount / totalExpense) * 100) : 0);
+            
+            // Determine progress bar color
+            let progressColor = cat.category_color;
+            let containerBgClass = "bg-white border-slate-100";
+            if (hasBudget) {
+              if (percentage >= 100) {
+                progressColor = "#EF4444"; // Red
+                containerBgClass = "bg-red-50 border-red-100";
+              } else if (percentage >= 80) {
+                progressColor = "#F59E0B"; // Orange
+              }
+            }
+
             return (
-              <View key={cat.category_id} className="bg-white p-4 rounded-2xl mb-3 shadow-sm shadow-slate-100 border border-slate-100">
+              <View key={cat.category_id} className={`p-4 rounded-2xl mb-3 shadow-sm shadow-slate-100 border ${containerBgClass}`}>
                 <View className="flex-row items-center justify-between mb-3">
                   <View className="flex-row items-center">
                     <View className="w-10 h-10 rounded-xl items-center justify-center mr-3" style={{ backgroundColor: cat.category_color + '20' }}>
@@ -106,12 +122,21 @@ export default function ReportsScreen() {
                     </View>
                     <View>
                       <Text className="text-base font-bold text-slate-800">{cat.category_name}</Text>
-                      <Text className="text-xs font-bold text-slate-400">{percentage}% of total</Text>
+                      <Text className="text-xs font-bold text-slate-400">
+                        {hasBudget ? `${percentage}% of budget` : `${percentage}% of total`}
+                      </Text>
                     </View>
                   </View>
-                  <Text className="text-base font-extrabold text-slate-800">
-                    ${cat.total_amount.toFixed(2)}
-                  </Text>
+                  <View className="items-end">
+                    <Text className="text-base font-extrabold text-slate-800">
+                      ${cat.total_amount.toFixed(2)}
+                    </Text>
+                    {hasBudget && (
+                      <Text className="text-xs font-medium text-slate-400">
+                        / ${cat.budget_limit?.toFixed(2)}
+                      </Text>
+                    )}
+                  </View>
                 </View>
 
                 {/* Progress Bar */}
@@ -119,8 +144,8 @@ export default function ReportsScreen() {
                   <View 
                     className="h-full rounded-full" 
                     style={{ 
-                      backgroundColor: cat.category_color,
-                      width: `${percentage}%`
+                      backgroundColor: progressColor,
+                      width: `${Math.min(percentage, 100)}%`
                     }} 
                   />
                 </View>

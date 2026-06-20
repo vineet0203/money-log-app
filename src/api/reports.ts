@@ -6,6 +6,7 @@ export interface CategoryBreakdown {
   category_name: string;
   category_color: string;
   icon_name: string;
+  budget_limit?: number | null;
   total_amount: number;
 }
 

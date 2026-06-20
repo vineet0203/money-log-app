@@ -38,6 +38,17 @@ export const useTransactionsInfinite = (type: string = 'all') => {
   });
 };
 
+export const useTransaction = (id: string | number) => {
+  return useQuery({
+    queryKey: ['transaction', id],
+    queryFn: async () => {
+      const response = await apiClient.get(`/api/transactions/${id}`);
+      return response.data;
+    },
+    enabled: !!id,
+  });
+};
+
 // Data can be standard or FormData if a receipt is included
 export const useAddTransaction = () => {
   const queryClient = useQueryClient();
