@@ -1,12 +1,17 @@
 import { View, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../store/authStore';
+import { useUser } from '../../api/users';
 import UserCard from '../../components/morescreen/UserCard';
 import SettingsItem from '../../components/morescreen/SettingsItem';
+import { getBackendUrl } from '../../store/authStore';
 
 export default function More() {
-  const { phoneNumber, logout } = useAuthStore();
+  const { logout } = useAuthStore();
+  const { data: user } = useUser();
   const router = useRouter();
+
+  const profileImageUrl = user?.profile_image_url ? `${getBackendUrl()}${user.profile_image_url}` : undefined;
 
   return (
     <View className="flex-1 bg-slate-50">
@@ -14,14 +19,19 @@ export default function More() {
         {/* User Profile Card */}
         <View className="mt-2 mb-6">
           <UserCard 
-            name="John Doe" 
-            email={phoneNumber || "john.doe@email.com"} 
+            name={user?.name || "User"} 
+            email={user?.email || user?.phone_number || "No email"}
+            // Note: If UserCard accepts an image prop in the future, we can pass profileImageUrl here
           />
         </View>
 
         {/* Settings List */}
         <View className="bg-white border-y border-slate-100 mb-6">
-          <SettingsItem iconName="person-outline" title="Profile" />
+          <SettingsItem 
+            iconName="person-outline" 
+            title="Profile" 
+            onPress={() => router.push('/profile')}
+          />
           <SettingsItem 
             iconName="wallet-outline" 
             title="Accounts" 

@@ -59,7 +59,10 @@ export default function SubscriptionForm({ initialValues = {} }: SubscriptionFor
         start_date: startDate,
         status: 'active',
         source: 'Manual',
-        category_id: categoryId
+        category_id: categoryId,
+        is_reminder_on: false,
+        is_sms_enabled: false,
+        is_email_enabled: false
       }, {
         onSuccess: () => router.back(),
         onError: () => Alert.alert('Error', 'Failed to add subscription')

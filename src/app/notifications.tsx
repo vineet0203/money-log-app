@@ -1,13 +1,62 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import Header from '../components/common/Header';
 import CustomSwitch from '../components/common/CustomSwitch';
+import { useUser, useUpdateUser } from '../api/users';
 
 export default function NotificationsScreen() {
-  const [smsEnabled, setSmsEnabled] = useState(true);
+  const router = useRouter();
+  const { data: user, isLoading } = useUser();
+  const updateUser = useUpdateUser();
+
+  const [smsEnabled, setSmsEnabled] = useState(false);
   const [emailEnabled, setEmailEnabled] = useState(true);
   const [pushEnabled, setPushEnabled] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setSmsEnabled(!!user.global_sms_enabled);
+      setEmailEnabled(!!user.global_email_enabled);
+      setPushEnabled(!!user.global_push_enabled);
+    }
+  }, [user]);
+
+  const handleToggleSms = async (val: boolean) => {
+    setSmsEnabled(val);
+    await updateUser.mutateAsync({ global_sms_enabled: val });
+  };
+
+  const handleToggleEmail = async (val: boolean) => {
+    if (val && (!user || !user.email)) {
+      Alert.alert(
+        "Email Required", 
+        "You must add an email address to your profile to enable global email notifications.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Add Email", onPress: () => router.push('/edit-profile') }
+        ]
+      );
+      return;
+    }
+    
+    setEmailEnabled(val);
+    await updateUser.mutateAsync({ global_email_enabled: val });
+  };
+
+  const handleTogglePush = async (val: boolean) => {
+    setPushEnabled(val);
+    await updateUser.mutateAsync({ global_push_enabled: val });
+  };
+
+  if (isLoading) {
+    return (
+      <View className="flex-1 bg-slate-50 items-center justify-center">
+        <ActivityIndicator size="large" color="#6BCB77" />
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-slate-50">
@@ -30,7 +79,7 @@ export default function NotificationsScreen() {
             </View>
             <CustomSwitch 
               value={smsEnabled} 
-              onValueChange={setSmsEnabled} 
+              onValueChange={handleToggleSms} 
             />
           </View>
 
@@ -47,7 +96,7 @@ export default function NotificationsScreen() {
             </View>
             <CustomSwitch 
               value={emailEnabled} 
-              onValueChange={setEmailEnabled} 
+              onValueChange={handleToggleEmail} 
             />
           </View>
 
@@ -64,7 +113,7 @@ export default function NotificationsScreen() {
             </View>
             <CustomSwitch 
               value={pushEnabled} 
-              onValueChange={setPushEnabled} 
+              onValueChange={handleTogglePush} 
             />
           </View>
 

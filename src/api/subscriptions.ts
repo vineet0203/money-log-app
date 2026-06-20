@@ -30,6 +30,9 @@ interface AddSubscriptionData {
   status: 'active' | 'cancelled';
   source?: string;
   category_id?: number | null;
+  is_reminder_on?: boolean | number;
+  is_sms_enabled?: boolean | number;
+  is_email_enabled?: boolean | number;
 }
 
 interface UpdateSubscriptionData extends Partial<AddSubscriptionData> {

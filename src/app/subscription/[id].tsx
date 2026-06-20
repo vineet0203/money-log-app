@@ -9,6 +9,7 @@ import TransactionCard from '../../components/cards/TransactionCard';
 
 import { useSubscriptionDetails, useUpdateSubscription } from '../../api/subscriptions';
 import { useCategories } from '../../api/categories';
+import { useUser } from '../../api/users';
 
 export default function SubscriptionDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -19,6 +20,7 @@ export default function SubscriptionDetailScreen() {
   const [isSmsEnabled, setIsSmsEnabled] = useState(false);
   const [isEmailEnabled, setIsEmailEnabled] = useState(true);
 
+  const { data: user } = useUser();
   const { data, isLoading, isError } = useSubscriptionDetails(id as string);
   const { data: categories } = useCategories();
   const updateSub = useUpdateSubscription();
@@ -28,7 +30,7 @@ export default function SubscriptionDetailScreen() {
       setIsReminderOn(!!data.subscription.is_reminder_on);
       setReminderDays(data.subscription.reminder_days || 3);
       setIsSmsEnabled(!!data.subscription.is_sms_enabled);
-      setIsEmailEnabled(data.subscription.is_email_enabled !== undefined ? !!data.subscription.is_email_enabled : true);
+      setIsEmailEnabled(data.subscription.is_email_enabled !== undefined ? !!data.subscription.is_email_enabled : false);
     }
   }, [data?.subscription]);
 
@@ -48,6 +50,18 @@ export default function SubscriptionDetailScreen() {
   };
 
   const handleToggleEmail = async (val: boolean) => {
+    if (val && (!user || !user.email)) {
+      Alert.alert(
+        "Email Required", 
+        "You must add an email address to your profile to enable email notifications.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Add Email", onPress: () => router.push('/edit-profile') }
+        ]
+      );
+      return;
+    }
+    
     setIsEmailEnabled(val);
     await updateSub.mutateAsync({ id: Number(id), is_email_enabled: val });
   };

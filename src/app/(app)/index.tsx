@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../store/authStore';
 import { useSubscriptions } from '../../api/subscriptions';
 import { useAccounts } from '../../api/accounts';
+import { useTransactions } from '../../api/transactions';
 import WelcomeCard from '../../components/homescreen/WelcomeCard';
 import StatsCard from '../../components/homescreen/StatsCard';
 import SubscriptionCard from '../../components/cards/SubscriptionCard';
@@ -17,6 +18,22 @@ export default function Home() {
   const { data: subscriptions, isLoading: isLoadingSubs } = useSubscriptions({ limit: 3 });
   const { data: accounts, isLoading: isLoadingAccounts } = useAccounts();
   const { data: upcomingBills, isLoading: isLoadingBills } = useSubscriptions({ upcomingDays: 15, limit: 3 });
+  const { data: transactions } = useTransactions();
+
+  // Calculate Totals
+  let income = 0;
+  let expense = 0;
+  
+  if (transactions) {
+    transactions.forEach(tx => {
+      const amount = parseFloat(tx.amount);
+      if (tx.type === 'income') {
+        income += amount;
+      } else if (tx.type === 'expense') {
+        expense += amount;
+      }
+    });
+  }
 
   return (
     <View className="flex-1 bg-white">
@@ -28,9 +45,9 @@ export default function Home() {
         <WelcomeCard name={phoneNumber || "User"} />
         
         <StatsCard 
-          balance={18260.75} 
-          income={3200.00} 
-          expense={1450.75} 
+          balance={0} 
+          income={income} 
+          expense={expense} 
         />
 
         {/* Subscriptions Section Header */}
