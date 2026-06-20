@@ -26,7 +26,10 @@ export default function Header({ title, showBack = false }: HeaderProps) {
         <Text className="text-2xl font-extrabold text-text">{title}</Text>
       </View>
 
-      <TouchableOpacity className="w-10 h-10 rounded-full bg-slate-50 items-center justify-center relative border border-slate-100">
+      <TouchableOpacity 
+        onPress={() => router.push('/notifications')}
+        className="w-10 h-10 rounded-full bg-slate-50 items-center justify-center relative border border-slate-100"
+      >
         <Ionicons name="notifications-outline" size={22} color="#0F172A" />
         {/* Unread badge dot */}
         <View className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white" />

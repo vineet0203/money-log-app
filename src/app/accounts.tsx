@@ -6,7 +6,7 @@ import Header from '../components/common/Header';
 import SearchBar from '../components/common/SearchBar';
 import AccountCard from '../components/cards/AccountCard';
 import FloatingActionButton from '../components/common/FloatingActionButton';
-import { useAccounts, useAddAccount, useUpdateAccount, useDeleteAccount } from '../api/accounts';
+import { useAccountsInfinite, useAddAccount, useUpdateAccount, useDeleteAccount } from '../api/accounts';
 
 // --- Helper Component: Custom MM/YYYY Picker Modal ---
 const CustomMonthYearPicker = ({ visible, onClose, onSelect, currentDate }: any) => {
@@ -86,7 +86,16 @@ export default function AccountsScreen() {
   const router = useRouter();
 
   // API hooks
-  const { data: accounts, isLoading } = useAccounts();
+  const { 
+    data, 
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    refetch,
+    isRefetching
+  } = useAccountsInfinite();
+  
   const addAccount = useAddAccount();
   const updateAccount = useUpdateAccount();
   const deleteAccount = useDeleteAccount();
@@ -104,10 +113,10 @@ export default function AccountsScreen() {
   const [pickerVisible, setPickerVisible] = useState(false);
 
   // Filter accounts based on search query
-  const filteredAccounts = accounts?.filter(account => 
+  const filteredAccounts = (data?.pages.flatMap(p => p.data) || []).filter(account => 
     account.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     (account.account_number && account.account_number.toLowerCase().includes(searchQuery.toLowerCase()))
-  ) || [];
+  );
 
   const handleAddOrEdit = () => {
     if (!name || !accountNumber) {
@@ -182,6 +191,12 @@ export default function AccountsScreen() {
     setModalVisible(false);
   };
 
+  const handleLoadMore = () => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  };
+
   return (
     <View className="flex-1 bg-white">
       <Header title="My Accounts" showBack={true} />
@@ -193,32 +208,47 @@ export default function AccountsScreen() {
         />
       </View>
 
-      <ScrollView 
-        className="flex-1" 
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 120 }}
-      >
-        {isLoading ? (
-          <ActivityIndicator color="#6BCB77" className="mt-10" />
-        ) : filteredAccounts.length > 0 ? (
-          filteredAccounts.map(account => (
+      {isLoading && !isRefetching ? (
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator color="#6BCB77" size="large" />
+        </View>
+      ) : (
+        <FlatList
+          className="flex-1"
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 120, paddingTop: 10 }}
+          data={filteredAccounts}
+          keyExtractor={(item) => item.id.toString()}
+          showsVerticalScrollIndicator={false}
+          renderItem={({ item: account }) => (
             <AccountCard 
-              key={account.id} 
               account={account} 
               onDetails={(acc) => router.push(`/account/${acc.id}`)}
               onEdit={openModalForEdit}
               onCancel={(acc) => handleDelete(acc.id)}
             />
-          ))
-        ) : (
-          <View className="flex-1 items-center justify-center mt-20">
-            <Ionicons name="wallet-outline" size={64} color="#CBD5E1" />
-            <Text className="text-gray-400 font-medium mt-4 text-center">
-              {searchQuery ? `No accounts found matching "${searchQuery}"` : "You haven't added any accounts yet."}
-            </Text>
-          </View>
-        )}
-      </ScrollView>
+          )}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={
+            isFetchingNextPage ? <ActivityIndicator color="#6BCB77" className="my-4" /> : null
+          }
+          ListEmptyComponent={
+            <View className="flex-1 items-center justify-center mt-20">
+              <Ionicons name="wallet-outline" size={64} color="#CBD5E1" />
+              <Text className="text-gray-400 font-medium mt-4 text-center">
+                {searchQuery ? `No accounts found matching "${searchQuery}"` : "You haven't added any accounts yet."}
+              </Text>
+            </View>
+          }
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={refetch}
+              colors={['#6BCB77']}
+            />
+          }
+        />
+      )}
 
       <FloatingActionButton 
         label="Add Account" 

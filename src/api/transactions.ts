@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import apiClient from './client';
 
 export interface Transaction {
@@ -14,13 +14,27 @@ export interface Transaction {
   subscription_id?: number | null;
 }
 
-export const useTransactions = () => {
+export const useTransactionStats = () => {
   return useQuery({
-    queryKey: ['transactions'],
-    queryFn: async (): Promise<Transaction[]> => {
-      const response = await apiClient.get('/api/transactions');
+    queryKey: ['transactionStats'],
+    queryFn: async () => {
+      const response = await apiClient.get('/api/transactions/stats');
+      return response.data as { income: number; expense: number; balance: number };
+    },
+  });
+};
+
+export const useTransactionsInfinite = (type: string = 'all') => {
+  return useInfiniteQuery({
+    queryKey: ['transactions', type],
+    queryFn: async ({ pageParam = 0 }) => {
+      const response = await apiClient.get('/api/transactions', {
+        params: { limit: 20, offset: pageParam, type },
+      });
       return response.data;
     },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => lastPage.nextOffset,
   });
 };
 

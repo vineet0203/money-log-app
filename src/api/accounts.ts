@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import apiClient from './client';
 
 export interface Account {
@@ -34,8 +34,22 @@ export const useAccounts = () => {
     queryKey: ['accounts'],
     queryFn: async (): Promise<Account[]> => {
       const response = await apiClient.get('/api/accounts');
+      return Array.isArray(response.data) ? response.data : response.data.data;
+    },
+  });
+};
+
+export const useAccountsInfinite = () => {
+  return useInfiniteQuery({
+    queryKey: ['accountsInfinite'],
+    queryFn: async ({ pageParam = 0 }) => {
+      const response = await apiClient.get('/api/accounts', {
+        params: { limit: 20, offset: pageParam },
+      });
       return response.data;
     },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => lastPage.nextOffset,
   });
 };
 

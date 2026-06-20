@@ -1,9 +1,10 @@
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { useState, useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../store/authStore';
 import { useSubscriptions } from '../../api/subscriptions';
 import { useAccounts } from '../../api/accounts';
-import { useTransactions } from '../../api/transactions';
+import { useTransactionStats } from '../../api/transactions';
 import WelcomeCard from '../../components/homescreen/WelcomeCard';
 import StatsCard from '../../components/homescreen/StatsCard';
 import SubscriptionCard from '../../components/cards/SubscriptionCard';
@@ -15,25 +16,23 @@ export default function Home() {
   const router = useRouter();
   
   // Fetch data
-  const { data: subscriptions, isLoading: isLoadingSubs } = useSubscriptions({ limit: 3 });
-  const { data: accounts, isLoading: isLoadingAccounts } = useAccounts();
-  const { data: upcomingBills, isLoading: isLoadingBills } = useSubscriptions({ upcomingDays: 15, limit: 3 });
-  const { data: transactions } = useTransactions();
+  const { data: subscriptions, isLoading: isLoadingSubs, refetch: refetchSubs } = useSubscriptions({ limit: 3 });
+  const { data: accounts, isLoading: isLoadingAccounts, refetch: refetchAccounts } = useAccounts();
+  const { data: upcomingBills, isLoading: isLoadingBills, refetch: refetchBills } = useSubscriptions({ upcomingDays: 15, limit: 3 });
+  const { data: stats, refetch: refetchStats } = useTransactionStats();
 
-  // Calculate Totals
-  let income = 0;
-  let expense = 0;
-  
-  if (transactions) {
-    transactions.forEach(tx => {
-      const amount = parseFloat(tx.amount);
-      if (tx.type === 'income') {
-        income += amount;
-      } else if (tx.type === 'expense') {
-        expense += amount;
-      }
-    });
-  }
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([
+      refetchSubs(),
+      refetchAccounts(),
+      refetchBills(),
+      refetchStats()
+    ]);
+    setRefreshing(false);
+  }, [refetchSubs, refetchAccounts, refetchBills, refetchStats]);
 
   return (
     <View className="flex-1 bg-white">
@@ -41,13 +40,20 @@ export default function Home() {
         className="flex-1"
         contentContainerStyle={{ padding: 20 }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#6BCB77']}
+          />
+        }
       >
         <WelcomeCard name={phoneNumber || "User"} />
         
         <StatsCard 
-          balance={0} 
-          income={income} 
-          expense={expense} 
+          balance={stats?.balance || 0} 
+          income={stats?.income || 0} 
+          expense={stats?.expense || 0} 
         />
 
         {/* Subscriptions Section Header */}

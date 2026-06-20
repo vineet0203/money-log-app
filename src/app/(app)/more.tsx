@@ -45,7 +45,7 @@ export default function More() {
           <SettingsItem 
             iconName="notifications-outline" 
             title="Notifications" 
-            onPress={() => router.push('/notifications')}
+            onPress={() => router.push('/notification-settings')}
           />
           <SettingsItem 
             iconName="calendar-outline" 

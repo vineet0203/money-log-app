@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import apiClient from './client';
 
 export interface Subscription {
@@ -64,8 +64,23 @@ export const useSubscriptions = (optionsOrLimit?: number | { limit?: number, off
       const response = await apiClient.get('/api/subscriptions', {
         params: { limit, offset, upcoming_days: upcomingDays }
       });
-      return response.data;
+      // Handle the case where backend returns { data, nextOffset } instead of an array
+      return Array.isArray(response.data) ? response.data : response.data.data;
     },
+  });
+};
+
+export const useSubscriptionsInfinite = (options?: { upcomingDays?: number }) => {
+  return useInfiniteQuery({
+    queryKey: ['subscriptionsInfinite', options?.upcomingDays],
+    queryFn: async ({ pageParam = 0 }) => {
+      const response = await apiClient.get('/api/subscriptions', {
+        params: { limit: 20, offset: pageParam, upcoming_days: options?.upcomingDays },
+      });
+      return response.data; // { data: Subscription[], nextOffset: number | null }
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => lastPage.nextOffset,
   });
 };
 
