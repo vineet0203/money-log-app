@@ -16,8 +16,7 @@ interface AuthState {
 }
 
 export const getBackendUrl = () => {
-  if (Platform.OS === 'android') return 'http://10.0.2.2:5001';
-  return 'http://localhost:5001';
+  return 'http://10.192.44.91:5001';
 };
 
 const hitBackendWithToken = async (idToken: string) => {

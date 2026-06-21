@@ -1,20 +1,30 @@
 import { useEffect } from 'react';
 import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import apiClient from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+let Notifications: any = null;
+try {
+  const isExpoGoAndroid = Constants.executionEnvironment === ExecutionEnvironment.StoreClient && Platform.OS === 'android';
+  if (!isExpoGoAndroid) {
+    Notifications = require('expo-notifications');
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+  } else {
+    console.log('Skipping expo-notifications import on Expo Go (Android) due to SDK 53 limitation.');
+  }
+} catch (e) {
+  console.warn('Could not initialize expo-notifications:', e);
+}
 
 export function usePushNotifications() {
   const { token: authToken } = useAuthStore();
@@ -41,6 +51,11 @@ export function usePushNotifications() {
 
   async function registerForPushNotificationsAsync() {
     let token;
+
+    if (!Notifications) {
+      console.log('Push notifications are not supported in this environment.');
+      return;
+    }
 
     const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
     if (isExpoGo && Platform.OS === 'android') {
@@ -74,7 +89,7 @@ export function usePushNotifications() {
       // Get the Expo Push Token
       const tokenData = await Notifications.getExpoPushTokenAsync({
         projectId: 'your-project-id-from-app-json' // Using default since we didn't setup eas.json strictly yet
-      }).catch((e) => {
+      }).catch((e: any) => {
         // Sometimes projectId requires eas setup. A fallback
         return Notifications.getExpoPushTokenAsync();
       });

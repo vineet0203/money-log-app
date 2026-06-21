@@ -1,54 +1,47 @@
-import { View, Text, TouchableOpacity, ActivityIndicator, TextInput, Platform } from "react-native";
+import { View, Text, TouchableOpacity, ActivityIndicator, Platform } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "expo-router";
 import { useAuthStore } from "../../store/authStore";
 import { Ionicons } from "@expo/vector-icons";
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import {
+  CodeField,
+  Cursor,
+  useBlurOnFulfill,
+  useClearByFocusCell,
+} from 'react-native-confirmation-code-field';
+
+const CELL_COUNT = 6;
 
 export default function Verify() {
   const router = useRouter();
   const { verifyOtp, phoneNumber } = useAuthStore();
-  const [code, setCode] = useState(['', '', '', '', '', '']);
+  const [value, setValue] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const inputRefs = useRef<Array<TextInput | null>>([]);
 
-  // Auto-focus first input on mount
+  const ref = useBlurOnFulfill({value, cellCount: CELL_COUNT});
+  const [props, getCellOnLayoutHandler] = useClearByFocusCell({
+    value,
+    setValue,
+  });
+
   useEffect(() => {
     setTimeout(() => {
-      inputRefs.current[0]?.focus();
+      ref.current?.focus();
     }, 100);
   }, []);
 
-  const handleChangeText = (text: string, index: number) => {
-    // Only allow numeric input
-    const numericText = text.replace(/[^0-9]/g, '');
-    const newCode = [...code];
-    newCode[index] = numericText;
-    setCode(newCode);
-
-    if (numericText && index < 5) {
-      inputRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleKeyPress = (e: any, index: number) => {
-    if (e.nativeEvent.key === 'Backspace' && !code[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    }
-  };
-
   const handleVerify = async () => {
-    const fullCode = code.join('');
-    if (fullCode.length !== 6) {
+    if (value.length !== CELL_COUNT) {
       setError("Please enter all 6 digits");
       return;
     }
 
     setError("");
     setLoading(true);
-    const result = await verifyOtp(fullCode);
+    const result = await verifyOtp(value);
     setLoading(false);
 
     if (result.success) {
@@ -85,22 +78,27 @@ export default function Verify() {
           <Text className="text-primary font-bold">{phoneNumber || "+1 (555) 000-0000"}</Text>
         </Text>
 
-        {/* 6 OTP Input Boxes */}
-        <View className="flex-row justify-between mb-8">
-          {code.map((digit, index) => (
-            <TextInput
+        <CodeField
+          ref={ref}
+          {...props}
+          value={value}
+          onChangeText={setValue}
+          cellCount={CELL_COUNT}
+          keyboardType="number-pad"
+          textContentType="oneTimeCode"
+          autoComplete="one-time-code"
+          rootStyle={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 32 }}
+          renderCell={({index, symbol, isFocused}) => (
+            <View
               key={index}
-              ref={(ref) => inputRefs.current[index] = ref}
-              className={`w-12 h-14 bg-slate-50 border-2 rounded-xl text-center text-xl font-bold text-text ${error ? 'border-red-400' : digit ? 'border-primary' : 'border-slate-200'}`}
-              keyboardType="number-pad"
-              maxLength={1}
-              value={digit}
-              onChangeText={(text) => handleChangeText(text, index)}
-              onKeyPress={(e) => handleKeyPress(e, index)}
-              selectTextOnFocus
-            />
-          ))}
-        </View>
+              className={`w-12 h-14 bg-slate-50 border-2 rounded-xl items-center justify-center ${error ? 'border-red-400' : isFocused || symbol ? 'border-primary' : 'border-slate-200'}`}
+              onLayout={getCellOnLayoutHandler(index)}>
+              <Text className="text-xl font-bold text-text">
+                {symbol || (isFocused ? <Cursor /> : null)}
+              </Text>
+            </View>
+          )}
+        />
 
         {error ? (
           <Text className="text-red-500 text-sm font-medium text-center mb-6">{error}</Text>
@@ -108,8 +106,8 @@ export default function Verify() {
 
         <TouchableOpacity 
           onPress={handleVerify}
-          disabled={loading || code.join('').length !== 6}
-          className={`w-full bg-primary py-4 rounded-full items-center shadow-md shadow-primary/30 ${(loading || code.join('').length !== 6) ? 'opacity-70' : ''}`}
+          disabled={loading || value.length !== CELL_COUNT}
+          className={`w-full bg-primary py-4 rounded-full items-center shadow-md shadow-primary/30 ${(loading || value.length !== CELL_COUNT) ? 'opacity-70' : ''}`}
         >
           {loading ? (
             <ActivityIndicator color="#fff" />

@@ -87,16 +87,18 @@ export default function NotificationsScreen() {
                   } 
                 />
               </View>
-              <View className="flex-1 justify-center">
+              <View className={`flex-1 justify-center`}>
                 <View className="flex-row justify-between items-center mb-1">
-                  <Text className={`font-extrabold flex-1 ${item.is_read ? 'text-slate-700' : 'text-slate-900'}`}>{item.title}</Text>
-                  <Text className="text-xs text-slate-400 ml-2">{dayjs(item.created_at).fromNow(true)}</Text>
+                  <Text className={`font-extrabold flex-1 mr-2 ${item.is_read ? 'text-slate-700' : 'text-slate-900'}`} numberOfLines={1}>{item.title}</Text>
+                  <View className="flex-row items-center">
+                    {!item.is_read && (
+                      <View className="w-2.5 h-2.5 rounded-full bg-primary mr-1.5" />
+                    )}
+                    <Text className="text-xs text-slate-400">{dayjs(item.created_at).fromNow(true)}</Text>
+                  </View>
                 </View>
                 <Text className={`text-sm leading-5 ${item.is_read ? 'text-slate-500' : 'text-slate-700 font-medium'}`}>{item.message}</Text>
               </View>
-              {!item.is_read && (
-                <View className="absolute top-4 right-4 w-3 h-3 rounded-full bg-primary" />
-              )}
             </TouchableOpacity>
           )}
         />

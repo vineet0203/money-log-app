@@ -43,8 +43,10 @@ export default function Header({ title, showBack = false, rightIcon, onRightPres
           className="w-10 h-10 rounded-full bg-slate-50 items-center justify-center relative border border-slate-100"
         >
           <Ionicons name="notifications-outline" size={22} color="#0F172A" />
-          {/* Unread badge dot always visible as requested */}
-          <View className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white" />
+          {/* Unread badge dot */}
+          {(unreadCount ?? 0) > 0 && (
+            <View className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white" />
+          )}
         </TouchableOpacity>
       )}
     </View>
