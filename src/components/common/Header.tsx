@@ -2,15 +2,19 @@ import { View, Text, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useUnreadNotificationsCount } from "../../api/notifications";
 
 interface HeaderProps {
   title: string;
   showBack?: boolean;
+  rightIcon?: any;
+  onRightPress?: () => void;
 }
 
-export default function Header({ title, showBack = false }: HeaderProps) {
+export default function Header({ title, showBack = false, rightIcon, onRightPress }: HeaderProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { data: unreadCount } = useUnreadNotificationsCount();
 
   return (
     <View
@@ -26,14 +30,23 @@ export default function Header({ title, showBack = false }: HeaderProps) {
         <Text className="text-2xl font-extrabold text-text">{title}</Text>
       </View>
 
-      <TouchableOpacity 
-        onPress={() => router.push('/notifications')}
-        className="w-10 h-10 rounded-full bg-slate-50 items-center justify-center relative border border-slate-100"
-      >
-        <Ionicons name="notifications-outline" size={22} color="#0F172A" />
-        {/* Unread badge dot */}
-        <View className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white" />
-      </TouchableOpacity>
+      {rightIcon ? (
+        <TouchableOpacity 
+          onPress={onRightPress}
+          className="w-10 h-10 rounded-full bg-slate-50 items-center justify-center relative border border-slate-100"
+        >
+          <Ionicons name={rightIcon} size={22} color="#0F172A" />
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity 
+          onPress={() => router.push('/notifications')}
+          className="w-10 h-10 rounded-full bg-slate-50 items-center justify-center relative border border-slate-100"
+        >
+          <Ionicons name="notifications-outline" size={22} color="#0F172A" />
+          {/* Unread badge dot always visible as requested */}
+          <View className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white" />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
