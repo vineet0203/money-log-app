@@ -15,19 +15,21 @@ export default function Login() {
   const [error, setError] = useState("");
 
   const handleSendOtp = async () => {
-    if (phone.length < 5) {
-      setError("Please enter a valid phone number");
+    // Phone should contain only digits and be at least 10 digits long (basic validation)
+    const numericPhone = phone.replace(/[^0-9]/g, '');
+    if (numericPhone.length < 10) {
+      setError("Please enter a valid phone number (at least 10 digits)");
       return;
     }
     setError("");
     setLoading(true);
-    const success = await sendOtp(formattedPhone);
+    const result = await sendOtp(formattedPhone);
     setLoading(false);
     
-    if (success) {
+    if (result.success) {
       router.push('/(auth)/verify');
     } else {
-      setError("Mock mode: Use any valid format phone number.");
+      setError(result.error || "Failed to send OTP. Please try again.");
     }
   };
 

@@ -38,9 +38,12 @@ export default function AppLayout() {
         tabBarActiveTintColor: '#6BCB77',
         tabBarInactiveTintColor: '#94A3B8',
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: '600',
           marginTop: 4,
+        },
+        tabBarItemStyle: {
+          paddingHorizontal: 0,
         },
         tabBarStyle: {
           backgroundColor: '#FFFFFF',

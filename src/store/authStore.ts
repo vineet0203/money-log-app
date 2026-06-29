@@ -1,6 +1,7 @@
-import { create } from 'zustand';
-import axios from 'axios';
-import { Platform } from 'react-native';
+import { create } from "zustand";
+import axios from "axios";
+import { Platform } from "react-native";
+import * as SecureStore from "expo-secure-store";
 
 interface AuthState {
   isAuthenticated: boolean;
@@ -9,26 +10,44 @@ interface AuthState {
   user: any | null;
   token: string | null;
   isProfileComplete: boolean;
-  sendOtp: (phone: string) => Promise<boolean>;
-  verifyOtp: (code: string) => Promise<{ success: boolean; isProfileComplete: boolean }>;
-  completeProfile: (name: string, email?: string) => Promise<boolean>;
+  sendOtp: (phone: string) => Promise<{ success: boolean; error?: string }>;
+  verifyOtp: (
+    code: string,
+  ) => Promise<{
+    success: boolean;
+    isProfileComplete: boolean;
+    error?: string;
+  }>;
+  completeProfile: (
+    data: FormData | { name: string; email?: string }
+  ) => Promise<{ success: boolean; error?: string }>;
+  isInitialized: boolean;
+  initAuth: () => Promise<void>;
   logout: () => void;
 }
 
 export const getBackendUrl = () => {
+  // If you are testing on a PHYSICAL device with Expo Go, use your computer's local Wi-Fi IP:
   return 'http://10.192.44.91:5001';
+
+  // If you are running on an Android Emulator on your computer screen, uncomment this instead:
+  // return 'http://10.0.2.2:5001';
 };
 
-const hitBackendWithToken = async (idToken: string) => {
-  try {
-    const backendUrl = getBackendUrl();
-    const response = await axios.post(`${backendUrl}/api/auth/verify-token`, { idToken });
-    return { success: true, isProfileComplete: response.data.isProfileComplete, user: response.data.user };
-  } catch (error: any) {
-    console.error("Backend verification failed:", error?.response?.data || error.message);
-    return { success: false, isProfileComplete: false, user: null };
+// Setup global axios instance/interceptor for the auth store
+export const authApi = axios.create({
+  baseURL: getBackendUrl(),
+});
+
+authApi.interceptors.request.use(async (config) => {
+  const token = await SecureStore.getItemAsync("accessToken");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
-};
+  return config;
+});
+
+// We can add a response interceptor here later to handle 401s and refresh tokens automatically
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: false,
@@ -39,64 +58,134 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isProfileComplete: false,
 
   sendOtp: async (phone: string) => {
-    // MOCKED: Skip Firebase and instantly simulate sending an OTP
-    console.log(`[MOCK] Sending fake OTP to ${phone}`);
-    await new Promise(resolve => setTimeout(resolve, 500)); // simulate network delay
-    set({ phoneNumber: phone, isOtpSent: true });
-    return true;
+    try {
+      await authApi.post("/api/auth/send-otp", { phone });
+      set({ phoneNumber: phone, isOtpSent: true });
+      return { success: true };
+    } catch (error: any) {
+      console.error("Error sending OTP:", error);
+      const message =
+        error.response?.data?.error ||
+        error.response?.data?.details?.[0]?.message ||
+        "Network error: Failed to connect to server";
+      return { success: false, error: message };
+    }
   },
 
   verifyOtp: async (code: string) => {
     const { phoneNumber } = get();
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 500)); // simulate network delay
-      
-      // MOCKED: Accept 123456 as the universal success code
-      if (code === "123456") {
-        console.log(`[MOCK] OTP Verified. Sending mock token to backend...`);
-        // Send a special mocked token to our backend
-        const mockToken = "mock_token_123";
-        const backendSync = await hitBackendWithToken(mockToken);
+      const response = await authApi.post("/api/auth/verify-otp", {
+        phone: phoneNumber,
+        code,
+      });
 
-        if (backendSync.success) {
-          set({ 
-            isAuthenticated: true, 
-            user: backendSync.user, 
-            token: mockToken,
-            isProfileComplete: backendSync.isProfileComplete 
-          });
-          return { success: true, isProfileComplete: backendSync.isProfileComplete };
-        }
-      }
-      return { success: false, isProfileComplete: false };
-    } catch (error) {
-      console.error("Error verifying mock OTP:", error);
-      return { success: false, isProfileComplete: false };
+      const { accessToken, refreshToken, user, isProfileComplete } =
+        response.data;
+
+      // Save tokens securely
+      await SecureStore.setItemAsync("accessToken", accessToken);
+      await SecureStore.setItemAsync("refreshToken", refreshToken);
+
+      set({
+        isAuthenticated: true,
+        user,
+        token: accessToken,
+        isProfileComplete,
+      });
+      return { success: true, isProfileComplete };
+    } catch (error: any) {
+      console.error("Error verifying OTP:", error);
+      const message =
+        error.response?.data?.error ||
+        error.response?.data?.details?.[0]?.message ||
+        "Network error: Failed to connect to server";
+      return { success: false, isProfileComplete: false, error: message };
     }
   },
 
-  completeProfile: async (name: string, email?: string) => {
+  completeProfile: async (data: any) => {
     const { user } = get();
-    if (!user) return false;
+    if (!user) return { success: false, error: "User not logged in" };
 
     try {
-      const backendUrl = getBackendUrl();
-      // Using the mock token for auth header in development
-      await axios.post(`${backendUrl}/api/auth/complete-profile`, 
-        { name, email },
-        { headers: { Authorization: `Bearer mock_token_123` } }
-      );
+      if (data instanceof FormData) {
+        await authApi.put("/api/users/profile", data, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+      } else {
+        await authApi.post("/api/auth/complete-profile", data);
+      }
       
       set({ isProfileComplete: true });
-      return true;
-    } catch (error) {
+      return { success: true };
+    } catch (error: any) {
       console.error("Error completing profile:", error);
-      return false;
+      const message =
+        error.response?.data?.error ||
+        error.response?.data?.details?.[0]?.message ||
+        "Network error: Failed to connect to server";
+      return { success: false, error: message };
     }
   },
 
-  logout: () => {
-    set({ isAuthenticated: false, phoneNumber: null, isOtpSent: false, user: null, token: null, isProfileComplete: false });
+  logout: async () => {
+    await SecureStore.deleteItemAsync("accessToken");
+    await SecureStore.deleteItemAsync("refreshToken");
+    set({
+      isAuthenticated: false,
+      phoneNumber: null,
+      isOtpSent: false,
+      user: null,
+      token: null,
+      isProfileComplete: false,
+    });
+  },
+
+  isInitialized: false,
+  initAuth: async () => {
+    try {
+      const token = await SecureStore.getItemAsync("accessToken");
+      if (token) {
+        try {
+          const response = await authApi.get("/api/users/profile");
+          const user = response.data;
+          set({
+            isAuthenticated: true,
+            user,
+            token,
+            isProfileComplete: !!(user.name && user.email),
+          });
+        } catch (error: any) {
+          if (error.response?.status === 401) {
+            const refreshToken = await SecureStore.getItemAsync("refreshToken");
+            if (refreshToken) {
+              const refreshResponse = await axios.post(`${getBackendUrl()}/api/auth/refresh-token`, { refreshToken });
+              const { accessToken: newAccessToken, refreshToken: newRefreshToken } = refreshResponse.data;
+              await SecureStore.setItemAsync("accessToken", newAccessToken);
+              await SecureStore.setItemAsync("refreshToken", newRefreshToken);
+              
+              const retryResponse = await axios.get(`${getBackendUrl()}/api/users/profile`, {
+                headers: { Authorization: `Bearer ${newAccessToken}` }
+              });
+              const user = retryResponse.data;
+              set({
+                isAuthenticated: true,
+                user,
+                token: newAccessToken,
+                isProfileComplete: !!(user.name && user.email),
+              });
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.log('Failed to initialize auth:', e);
+    } finally {
+      set({ isInitialized: true });
+    }
   }
 }));

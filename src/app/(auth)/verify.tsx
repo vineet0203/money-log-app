@@ -51,7 +51,7 @@ export default function Verify() {
         router.replace('/(auth)/profile-setup');
       }
     } else {
-      setError("Invalid code. Please try again.");
+      setError(result.error || "Invalid code. Please try again.");
     }
   };
 
@@ -82,7 +82,9 @@ export default function Verify() {
           ref={ref}
           {...props}
           value={value}
-          onChangeText={setValue}
+          onChangeText={(text) => {
+            setValue(text.replace(/[^0-9]/g, ''));
+          }}
           cellCount={CELL_COUNT}
           keyboardType="number-pad"
           textContentType="oneTimeCode"

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator, Image, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import { useAuthStore } from '../../store/authStore';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,7 +13,27 @@ export default function CompleteProfileScreen() {
   
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [profileImageUri, setProfileImageUri] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  const handlePickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Please allow camera roll access to upload a profile picture.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setProfileImageUri(result.assets[0].uri);
+    }
+  };
 
   const handleSave = async () => {
     if (!name.trim() || !email.trim()) {
@@ -28,27 +49,70 @@ export default function CompleteProfileScreen() {
     }
 
     setIsLoading(true);
-    const success = await completeProfile(name.trim(), email.trim());
+
+    let dataToSubmit: any = { name: name.trim(), email: email.trim() };
+
+    if (profileImageUri) {
+      const formData = new FormData() as any;
+      formData.append('name', name.trim());
+      formData.append('email', email.trim());
+
+      const filename = profileImageUri.split('/').pop() || 'profile.jpg';
+      const match = /\.(\w+)$/.exec(filename);
+      const typeMatch = match ? `image/${match[1]}` : `image`;
+
+      formData.append('profile_image', {
+        uri: profileImageUri,
+        name: filename,
+        type: typeMatch,
+      });
+      
+      dataToSubmit = formData;
+    }
+
+    const result = await completeProfile(dataToSubmit);
     setIsLoading(false);
 
-    if (success) {
+    if (result.success) {
       router.replace('/(app)');
     } else {
-      Alert.alert('Error', 'Failed to save profile. Email might already be in use.');
+      Alert.alert('Error', result.error || 'Failed to save profile. Email might already be in use.');
     }
   };
 
   return (
-    <View className="flex-1 bg-white" style={{ paddingTop: insets.top }}>
-      <View className="flex-1 px-6 pt-10">
+    <KeyboardAvoidingView 
+      className="flex-1 bg-white" 
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <ScrollView 
+        className="flex-1" 
+        contentContainerStyle={{ paddingTop: insets.top, paddingHorizontal: 24, paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
+      >
         
         {/* Header Icon */}
-        <View className="w-16 h-16 bg-primary/10 rounded-2xl items-center justify-center mb-6">
-          <Ionicons name="person-add" size={32} color="#6BCB77" />
+        <View className="items-center mt-10 mb-6">
+          <TouchableOpacity 
+            onPress={handlePickImage}
+            activeOpacity={0.8}
+            className="relative"
+          >
+            <View className="w-28 h-28 bg-primary/10 rounded-full items-center justify-center mb-2 overflow-hidden border-4 border-slate-50">
+              {profileImageUri ? (
+                <Image source={{ uri: profileImageUri }} className="w-full h-full" resizeMode="cover" />
+              ) : (
+                <Ionicons name="person-add" size={40} color="#6BCB77" />
+              )}
+            </View>
+            <View className="absolute bottom-2 right-0 bg-primary w-8 h-8 rounded-full items-center justify-center border-2 border-white">
+              <Ionicons name="camera" size={14} color="#FFF" />
+            </View>
+          </TouchableOpacity>
         </View>
 
-        <Text className="text-3xl font-extrabold text-slate-800 mb-2">Complete Profile</Text>
-        <Text className="text-base text-slate-500 mb-10">
+        <Text className="text-3xl font-extrabold text-slate-800 mb-2 text-center">Complete Profile</Text>
+        <Text className="text-base text-slate-500 mb-10 text-center">
           Almost there! We just need a few details to finish setting up your account.
         </Text>
 
@@ -95,7 +159,7 @@ export default function CompleteProfileScreen() {
           )}
         </TouchableOpacity>
 
-      </View>
-    </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }

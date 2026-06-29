@@ -21,7 +21,7 @@ export default function More() {
           <UserCard 
             name={user?.name || "User"} 
             email={user?.email || user?.phone_number || "No email"}
-            // Note: If UserCard accepts an image prop in the future, we can pass profileImageUrl here
+            avatarUrl={profileImageUrl}
           />
         </View>
 

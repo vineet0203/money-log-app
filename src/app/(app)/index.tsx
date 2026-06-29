@@ -12,7 +12,7 @@ import AccountCard from '../../components/cards/AccountCard';
 import BillCard from '../../components/cards/BillCard';
 
 export default function Home() {
-  const { phoneNumber } = useAuthStore();
+  const { user, phoneNumber } = useAuthStore();
   const router = useRouter();
   
   // Fetch data
@@ -34,6 +34,8 @@ export default function Home() {
     setRefreshing(false);
   }, [refetchSubs, refetchAccounts, refetchBills, refetchStats]);
 
+  const displayName = user?.name || phoneNumber || "User";
+
   return (
     <View className="flex-1 bg-white">
       <ScrollView 
@@ -48,7 +50,7 @@ export default function Home() {
           />
         }
       >
-        <WelcomeCard name={phoneNumber || "User"} />
+        <WelcomeCard name={displayName} />
         
         <StatsCard 
           balance={stats?.balance || 0} 

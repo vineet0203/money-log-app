@@ -74,13 +74,17 @@ export default function ProfileScreen() {
           </View>
 
           <View className="flex-row justify-between items-center py-4">
-            <View className="flex-row items-center">
-              <View className="w-10 h-10 rounded-full bg-purple-50 items-center justify-center mr-4">
+            <View className="flex-row items-center mr-4">
+              <View className="w-10 h-10 rounded-full bg-purple-50 items-center justify-center mr-4 flex-shrink-0">
                 <Ionicons name="mail-outline" size={18} color="#A855F7" />
               </View>
               <Text className="text-sm font-bold text-slate-500">Email Address</Text>
             </View>
-            <Text className={`text-base font-extrabold ${user.email ? 'text-slate-800' : 'text-slate-400'}`}>
+            <Text 
+              className={`flex-1 text-right text-base font-extrabold ${user.email ? 'text-slate-800' : 'text-slate-400'}`}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               {user.email || 'Not set'}
             </Text>
           </View>

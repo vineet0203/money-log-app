@@ -28,7 +28,7 @@ export default function ReportsScreen() {
   const pieData = categoryBreakdown.map(cat => ({
     value: cat.total_amount,
     color: cat.category_color,
-    text: `${Math.round((cat.total_amount / totalExpense) * 100)}%`
+    text: `${totalExpense > 0 ? Math.round((cat.total_amount / totalExpense) * 100) : 0}%`
   }));
 
   return (

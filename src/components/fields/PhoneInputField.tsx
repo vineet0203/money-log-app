@@ -21,7 +21,11 @@ export default function PhoneInputField({ value, onChangeText, onChangeFormatted
         defaultValue={value}
         defaultCode={defaultCode}
         layout="second"
-        onChangeText={onChangeText}
+        onChangeText={(text) => {
+          // Strip non-numeric characters before passing up
+          const numericText = text.replace(/[^0-9]/g, '');
+          onChangeText(numericText);
+        }}
         onChangeFormattedText={onChangeFormattedText}
         containerStyle={{
           width: '100%',
