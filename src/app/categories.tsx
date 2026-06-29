@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Modal, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Modal, Alert, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Header from '../components/common/Header';
 import FloatingActionButton from '../components/common/FloatingActionButton';
@@ -9,13 +9,20 @@ const AVAILABLE_COLORS = ['#F97316', '#3B82F6', '#A855F7', '#10B981', '#EF4444',
 const AVAILABLE_ICONS = ['fast-food', 'home', 'car', 'game-controller', 'cart', 'airplane', 'fitness', 'medical', 'book', 'cafe'];
 
 export default function CategoriesScreen() {
-  const { data: categories, isLoading } = useCategories();
+  const { data: categories, isLoading, refetch } = useCategories();
   const addCategoryMutation = useAddCategory();
   const updateCategoryMutation = useUpdateCategory();
   const deleteCategoryMutation = useDeleteCategory();
 
+  const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }, [refetch]);
 
   // Form State
   const [formName, setFormName] = useState('');
@@ -81,7 +88,13 @@ export default function CategoriesScreen() {
     <View className="flex-1 bg-slate-50">
       <Header title="Categories & Budgets" showBack={true} />
 
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        contentContainerStyle={{ padding: 20, paddingBottom: 100 }} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6BCB77" />
+        }
+      >
         {isLoading ? (
           <ActivityIndicator color="#6BCB77" className="mt-10" />
         ) : categories && categories.length > 0 ? (

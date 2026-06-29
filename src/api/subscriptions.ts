@@ -105,6 +105,7 @@ export const useAddSubscription = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+      queryClient.invalidateQueries({ queryKey: ['subscriptionsInfinite'] });
     },
   });
 };
@@ -120,6 +121,8 @@ export const useUpdateSubscription = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+      queryClient.invalidateQueries({ queryKey: ['subscriptionsInfinite'] });
+      queryClient.invalidateQueries({ queryKey: ['subscriptionDetails'] });
     },
   });
 };
@@ -134,9 +137,12 @@ export const usePaySubscription = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+      queryClient.invalidateQueries({ queryKey: ['subscriptionsInfinite'] });
+      queryClient.invalidateQueries({ queryKey: ['subscriptionDetails'] });
       // Invalidate categories and transactions since paying a sub affects them too
       queryClient.invalidateQueries({ queryKey: ['categories'] });
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['transactionStats'] });
     },
   });
 };
@@ -151,6 +157,8 @@ export const useDeleteSubscription = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+      queryClient.invalidateQueries({ queryKey: ['subscriptionsInfinite'] });
+      queryClient.invalidateQueries({ queryKey: ['subscriptionDetails'] });
     },
   });
 };

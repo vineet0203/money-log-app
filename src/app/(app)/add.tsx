@@ -133,11 +133,7 @@ export default function AddScreen() {
       if (isSubscriptionPay) {
         router.back();
       } else {
-        setAmount('');
-        setTitle('');
-        setDescription('');
-        setCategoryId(null);
-        setReceiptUri(null);
+        router.push('/(app)/transactions');
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to save transaction');

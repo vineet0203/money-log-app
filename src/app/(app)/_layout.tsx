@@ -8,10 +8,15 @@ import Header from '../../components/common/Header';
 
 export default function AppLayout() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isProfileComplete = useAuthStore((state) => state.isProfileComplete);
   const insets = useSafeAreaInsets();
 
   if (!isAuthenticated) {
     return <Redirect href="/(auth)" />;
+  }
+
+  if (!isProfileComplete) {
+    return <Redirect href="/(auth)/complete-profile" />;
   }
 
   const TabIcon = ({ name, focused, color }: { name: any, focused: boolean, color: string }) => (

@@ -32,7 +32,7 @@ export const useCategories = () => {
         iconName: cat.icon_name || 'folder',
         color: cat.color || '#94A3B8',
         budgetLimit: cat.budget_limit ? parseFloat(cat.budget_limit) : undefined,
-        spentThisMonth: cat.spent_this_month ? parseFloat(cat.spent_this_month) : 0,
+        spentThisMonth: cat.spent_this_month !== undefined && cat.spent_this_month !== null ? parseFloat(cat.spent_this_month) : 0,
       }));
     },
   });

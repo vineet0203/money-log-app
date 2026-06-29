@@ -277,7 +277,7 @@ export default function SubscriptionDetailScreen() {
       <TouchableOpacity 
         onPress={() => {
           router.push({
-            pathname: '/edit-subscription',
+            pathname: '/add-subscription',
             params: {
               id: subscription.id,
               name: subscription.name,

@@ -69,8 +69,11 @@ export const useAddTransaction = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      // If we paid a subscription, it bumps the cycle, so invalidate that too
+      queryClient.invalidateQueries({ queryKey: ['transactionStats'] });
       queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+      queryClient.invalidateQueries({ queryKey: ['subscriptionsInfinite'] });
+      queryClient.invalidateQueries({ queryKey: ['subscriptionDetails'] });
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
     },
   });
 };
