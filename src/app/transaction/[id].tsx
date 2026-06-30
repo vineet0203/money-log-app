@@ -57,7 +57,9 @@ export default function TransactionDetailsScreen() {
           </View>
           <Text className={`text-4xl font-extrabold mb-2 ${amountColor}`}>{amountStr}</Text>
           <Text className="text-xl font-bold text-slate-800 text-center">{transaction.title}</Text>
-          <Text className="text-sm font-medium text-slate-400 mt-1">{dayjs(transaction.date).format('MMMM D, YYYY')}</Text>
+          <Text className="text-sm font-medium text-slate-400 mt-1">
+            {dayjs(transaction.created_at || transaction.date).format('MMM D, YYYY • h:mm A')}
+          </Text>
         </View>
 
         {/* Info Cards */}
@@ -73,28 +75,33 @@ export default function TransactionDetailsScreen() {
               <Text className="text-sm font-medium text-slate-500">Type</Text>
               <Text className="text-sm font-bold text-slate-800 capitalize">{transaction.type}</Text>
             </View>
-            {transaction.description ? (
-              <View className="py-4 px-4">
-                <Text className="text-sm font-medium text-slate-500 mb-1">Note</Text>
-                <Text className="text-sm font-bold text-slate-800 leading-5">{transaction.description}</Text>
-              </View>
-            ) : null}
+            <View className="py-4 px-4">
+              <Text className="text-sm font-medium text-slate-500 mb-1">Note</Text>
+              <Text className={`text-sm font-bold leading-5 ${transaction.description ? 'text-slate-800' : 'text-slate-400 italic'}`}>
+                {transaction.description || 'No notes added'}
+              </Text>
+            </View>
           </View>
         </View>
 
         {/* Receipt Section */}
-        {receiptUrl && (
-          <View className="px-5 mt-6">
-            <Text className="text-sm font-extrabold text-slate-800 mb-3 uppercase tracking-wider">Receipt</Text>
-            <View className="bg-white rounded-2xl shadow-sm shadow-slate-100 border border-slate-100 overflow-hidden">
+        <View className="px-5 mt-6">
+          <Text className="text-sm font-extrabold text-slate-800 mb-3 uppercase tracking-wider">Receipt</Text>
+          <View className="bg-white rounded-2xl shadow-sm shadow-slate-100 border border-slate-100 overflow-hidden">
+            {receiptUrl ? (
               <Image 
                 source={{ uri: receiptUrl }} 
                 className="w-full h-64 bg-slate-100"
                 resizeMode="contain"
               />
-            </View>
+            ) : (
+              <View className="w-full h-32 bg-slate-50 items-center justify-center">
+                <Ionicons name="image-outline" size={32} color="#CBD5E1" />
+                <Text className="text-sm font-medium text-slate-400 mt-2">No receipt uploaded</Text>
+              </View>
+            )}
           </View>
-        )}
+        </View>
       </ScrollView>
     </View>
   );

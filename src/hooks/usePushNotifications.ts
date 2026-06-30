@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiClient from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
@@ -33,8 +34,9 @@ export function usePushNotifications() {
     if (!authToken) return; // Only register if user is logged in
 
     // 1. Register for push notifications
-    registerForPushNotificationsAsync().then(token => {
+    registerForPushNotificationsAsync().then(async (token) => {
       if (token) {
+        await AsyncStorage.setItem("pushToken", token);
         apiClient.put('/api/users/push-token', { token }).catch(console.error);
       }
     });

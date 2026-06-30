@@ -16,10 +16,12 @@ const CELL_COUNT = 6;
 
 export default function Verify() {
   const router = useRouter();
-  const { verifyOtp, phoneNumber } = useAuthStore();
+  const { verifyOtp, sendOtp, phoneNumber } = useAuthStore();
   const [value, setValue] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
   const [error, setError] = useState("");
+  const [timeLeft, setTimeLeft] = useState(120);
 
   const ref = useBlurOnFulfill({value, cellCount: CELL_COUNT});
   const [props, getCellOnLayoutHandler] = useClearByFocusCell({
@@ -32,6 +34,13 @@ export default function Verify() {
       ref.current?.focus();
     }, 100);
   }, []);
+
+  useEffect(() => {
+    if (timeLeft > 0) {
+      const timerId = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
+      return () => clearTimeout(timerId);
+    }
+  }, [timeLeft]);
 
   const handleVerify = async () => {
     if (value.length !== CELL_COUNT) {
@@ -48,11 +57,32 @@ export default function Verify() {
       if (result.isProfileComplete) {
         router.replace('/(app)');
       } else {
-        router.replace('/(auth)/profile-setup');
+        router.replace('/(auth)/complete-profile');
       }
     } else {
       setError(result.error || "Invalid code. Please try again.");
     }
+  };
+
+  const handleResend = async () => {
+    if (timeLeft > 0 || !phoneNumber) return;
+    
+    setError("");
+    setResending(true);
+    const result = await sendOtp(phoneNumber);
+    setResending(false);
+
+    if (result.success) {
+      setTimeLeft(120); // Reset timer to 2 minutes
+    } else {
+      setError(result.error || "Failed to resend code. Please try again.");
+    }
+  };
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
   return (
@@ -118,11 +148,17 @@ export default function Verify() {
           )}
         </TouchableOpacity>
 
-        <View className="flex-row justify-center mt-6">
+        <View className="flex-row justify-center items-center mt-6 h-10">
           <Text className="text-textMuted font-medium">Didn't receive the code? </Text>
-          <TouchableOpacity>
-            <Text className="text-primary font-bold">Resend</Text>
-          </TouchableOpacity>
+          {resending ? (
+            <ActivityIndicator size="small" color="#6BCB77" className="ml-2" />
+          ) : (
+            <TouchableOpacity onPress={handleResend} disabled={timeLeft > 0}>
+              <Text className={`${timeLeft > 0 ? 'text-slate-400' : 'text-primary'} font-bold`}>
+                {timeLeft > 0 ? `Resend in ${formatTime(timeLeft)}` : 'Resend'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </KeyboardAwareScrollView>
       <StatusBar style="dark" />

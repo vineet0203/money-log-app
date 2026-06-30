@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { View, FlatList, Text, ActivityIndicator, Alert, RefreshControl } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Header from '../components/common/Header';
 import SearchBar from '../components/common/SearchBar';
@@ -23,6 +24,12 @@ export default function SubscriptionsScreen() {
   } = useSubscriptionsInfinite();
   
   const deleteSub = useDeleteSubscription();
+
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch])
+  );
 
   const filteredSubscriptions = useMemo(() => {
     const allSubs = data?.pages.flatMap(page => page.data) || [];

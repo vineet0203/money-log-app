@@ -15,6 +15,7 @@ export interface MonthlyReport {
   totalIncome: number;
   totalExpense: number;
   categoryBreakdown: CategoryBreakdown[];
+  incomeCategoryBreakdown: CategoryBreakdown[];
 }
 
 export const useMonthlyReport = (year?: number, month?: number) => {

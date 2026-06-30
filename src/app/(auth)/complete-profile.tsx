@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator, Image, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator, Image, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuthStore } from '../../store/authStore';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 export default function CompleteProfileScreen() {
   const router = useRouter();
@@ -81,18 +82,22 @@ export default function CompleteProfileScreen() {
   };
 
   return (
-    <KeyboardAvoidingView 
-      className="flex-1 bg-white" 
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView 
-        className="flex-1" 
-        contentContainerStyle={{ paddingTop: insets.top, paddingHorizontal: 24, paddingBottom: 40 }}
+    <View className="flex-1 bg-white">
+      <KeyboardAwareScrollView
+        contentContainerStyle={{
+          flexGrow: 1,
+          justifyContent: 'center',
+          paddingTop: insets.top,
+          paddingHorizontal: 24,
+          paddingBottom: 40,
+        }}
         showsVerticalScrollIndicator={false}
+        enableOnAndroid={true}
+        keyboardShouldPersistTaps="handled"
+        extraScrollHeight={20}
       >
-        
         {/* Header Icon */}
-        <View className="items-center mt-10 mb-6">
+        <View className="items-center mt-6 mb-6">
           <TouchableOpacity 
             onPress={handlePickImage}
             activeOpacity={0.8}
@@ -112,27 +117,27 @@ export default function CompleteProfileScreen() {
         </View>
 
         <Text className="text-3xl font-extrabold text-slate-800 mb-2 text-center">Complete Profile</Text>
-        <Text className="text-base text-slate-500 mb-10 text-center">
+        <Text className="text-base text-slate-500 mb-8 text-center">
           Almost there! We just need a few details to finish setting up your account.
         </Text>
 
         {/* Name Input */}
         <Text className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Full Name *</Text>
-        <View className="flex-row items-center bg-slate-50 border border-slate-200 rounded-2xl px-4 py-4 mb-6">
+        <View className="flex-row items-center bg-slate-50 border border-slate-200 rounded-2xl px-4 h-14 mb-6">
           <Ionicons name="person-outline" size={20} color="#94A3B8" className="mr-3" />
           <TextInput
             value={name}
             onChangeText={setName}
             placeholder="John Doe"
             placeholderTextColor="#94A3B8"
-            className="flex-1 text-base font-bold text-slate-800 ml-2"
+            className="flex-1 text-base font-bold text-slate-800 ml-2 py-0"
             autoCapitalize="words"
           />
         </View>
 
         {/* Email Input */}
         <Text className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Email Address *</Text>
-        <View className="flex-row items-center bg-slate-50 border border-slate-200 rounded-2xl px-4 py-4 mb-10">
+        <View className="flex-row items-center bg-slate-50 border border-slate-200 rounded-2xl px-4 h-14 mb-10">
           <Ionicons name="mail-outline" size={20} color="#94A3B8" className="mr-3" />
           <TextInput
             value={email}
@@ -141,7 +146,7 @@ export default function CompleteProfileScreen() {
             placeholderTextColor="#94A3B8"
             keyboardType="email-address"
             autoCapitalize="none"
-            className="flex-1 text-base font-bold text-slate-800 ml-2"
+            className="flex-1 text-base font-bold text-slate-800 ml-2 py-0"
           />
         </View>
 
@@ -158,8 +163,7 @@ export default function CompleteProfileScreen() {
             <Text className="text-white font-extrabold text-lg tracking-wide">Continue to App</Text>
           )}
         </TouchableOpacity>
-
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
+    </View>
   );
 }

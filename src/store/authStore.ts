@@ -1,7 +1,8 @@
 import { create } from "zustand";
 import axios from "axios";
 import { Platform } from "react-native";
-import * as SecureStore from "expo-secure-store";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import Toast from "react-native-toast-message";
 
 interface AuthState {
   isAuthenticated: boolean;
@@ -11,15 +12,13 @@ interface AuthState {
   token: string | null;
   isProfileComplete: boolean;
   sendOtp: (phone: string) => Promise<{ success: boolean; error?: string }>;
-  verifyOtp: (
-    code: string,
-  ) => Promise<{
+  verifyOtp: (code: string) => Promise<{
     success: boolean;
     isProfileComplete: boolean;
     error?: string;
   }>;
   completeProfile: (
-    data: FormData | { name: string; email?: string }
+    data: FormData | { name: string; email?: string },
   ) => Promise<{ success: boolean; error?: string }>;
   isInitialized: boolean;
   initAuth: () => Promise<void>;
@@ -28,7 +27,7 @@ interface AuthState {
 
 export const getBackendUrl = () => {
   // If you are testing on a PHYSICAL device with Expo Go, use your computer's local Wi-Fi IP:
-  return 'http://10.192.44.91:5001';
+  return "https://moneylog.com/api";
 
   // If you are running on an Android Emulator on your computer screen, uncomment this instead:
   // return 'http://10.0.2.2:5001';
@@ -40,14 +39,55 @@ export const authApi = axios.create({
 });
 
 authApi.interceptors.request.use(async (config) => {
-  const token = await SecureStore.getItemAsync("accessToken");
+  const token = await AsyncStorage.getItem("accessToken");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
 
-// We can add a response interceptor here later to handle 401s and refresh tokens automatically
+authApi.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      try {
+        const refreshToken = await AsyncStorage.getItem("refreshToken");
+        if (refreshToken) {
+          const refreshResponse = await axios.post(
+            `${getBackendUrl()}/api/auth/refresh-token`,
+            { refreshToken },
+          );
+          const { accessToken: newAccessToken, refreshToken: newRefreshToken } =
+            refreshResponse.data;
+
+          await AsyncStorage.setItem("accessToken", newAccessToken);
+          await AsyncStorage.setItem("refreshToken", newRefreshToken);
+
+          useAuthStore.setState({ token: newAccessToken });
+
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+          return axios(originalRequest);
+        }
+      } catch (e) {
+        useAuthStore.getState().logout();
+      }
+    }
+    if (error.response?.status !== 401) {
+      const message =
+        error.response?.data?.error ||
+        error.response?.data?.details?.[0]?.message ||
+        "Network error. Please try again.";
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: message,
+      });
+    }
+    return Promise.reject(error);
+  },
+);
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: false,
@@ -63,7 +103,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ phoneNumber: phone, isOtpSent: true });
       return { success: true };
     } catch (error: any) {
-      console.error("Error sending OTP:", error);
+      console.log("Error sending OTP:", error);
       const message =
         error.response?.data?.error ||
         error.response?.data?.details?.[0]?.message ||
@@ -84,9 +124,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const { accessToken, refreshToken, user, isProfileComplete } =
         response.data;
 
-      // Save tokens securely
-      await SecureStore.setItemAsync("accessToken", accessToken);
-      await SecureStore.setItemAsync("refreshToken", refreshToken);
+      // Save tokens and user data securely
+      await AsyncStorage.setItem("accessToken", accessToken);
+      await AsyncStorage.setItem("refreshToken", refreshToken);
+      await AsyncStorage.setItem("user", JSON.stringify(user));
+      await AsyncStorage.setItem(
+        "isProfileComplete",
+        isProfileComplete.toString(),
+      );
 
       set({
         isAuthenticated: true,
@@ -96,7 +141,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
       return { success: true, isProfileComplete };
     } catch (error: any) {
-      console.error("Error verifying OTP:", error);
+      console.log("Error verifying OTP:", error);
       const message =
         error.response?.data?.error ||
         error.response?.data?.details?.[0]?.message ||
@@ -119,11 +164,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       } else {
         await authApi.post("/api/auth/complete-profile", data);
       }
-      
-      set({ isProfileComplete: true });
+
+      await AsyncStorage.setItem("isProfileComplete", "true");
+
+      const newName = data instanceof FormData ? data._parts.find((p: any) => p[0] === 'name')?.[1] : data.name;
+
+      set((state) => ({ 
+        isProfileComplete: true,
+        user: state.user ? { ...state.user, name: newName || state.user.name } : null
+      }));
       return { success: true };
     } catch (error: any) {
-      console.error("Error completing profile:", error);
+      console.log("Error completing profile:", error);
       const message =
         error.response?.data?.error ||
         error.response?.data?.details?.[0]?.message ||
@@ -133,8 +185,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
-    await SecureStore.deleteItemAsync("accessToken");
-    await SecureStore.deleteItemAsync("refreshToken");
+    try {
+      const pushToken = await AsyncStorage.getItem("pushToken");
+      const refreshToken = await AsyncStorage.getItem("refreshToken");
+      if (refreshToken || pushToken) {
+        await authApi.post("/api/auth/logout", { refreshToken, pushToken });
+      }
+    } catch (e) {
+      console.log("Error during backend logout API call:", e);
+    }
+
+    await AsyncStorage.multiRemove([
+      "accessToken",
+      "refreshToken",
+      "pushToken",
+      "user",
+      "isProfileComplete",
+    ]);
     set({
       isAuthenticated: false,
       phoneNumber: null,
@@ -148,44 +215,92 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isInitialized: false,
   initAuth: async () => {
     try {
-      const token = await SecureStore.getItemAsync("accessToken");
+      const token = await AsyncStorage.getItem("accessToken");
+      const storedUserStr = await AsyncStorage.getItem("user");
+      const storedProfileCompleteStr =
+        await AsyncStorage.getItem("isProfileComplete");
+
       if (token) {
+        // Optimistically set the state from local cache
+        if (storedUserStr) {
+          set({
+            isAuthenticated: true,
+            user: JSON.parse(storedUserStr),
+            token,
+            isProfileComplete: storedProfileCompleteStr === "true",
+          });
+        }
+
         try {
           const response = await authApi.get("/api/users/profile");
           const user = response.data;
+          const isComplete = !!(user.name && user.email);
+
+          await AsyncStorage.setItem("user", JSON.stringify(user));
+          await AsyncStorage.setItem(
+            "isProfileComplete",
+            isComplete.toString(),
+          );
+
           set({
             isAuthenticated: true,
             user,
             token,
-            isProfileComplete: !!(user.name && user.email),
+            isProfileComplete: isComplete,
           });
         } catch (error: any) {
           if (error.response?.status === 401) {
-            const refreshToken = await SecureStore.getItemAsync("refreshToken");
+            const refreshToken = await AsyncStorage.getItem("refreshToken");
             if (refreshToken) {
-              const refreshResponse = await axios.post(`${getBackendUrl()}/api/auth/refresh-token`, { refreshToken });
-              const { accessToken: newAccessToken, refreshToken: newRefreshToken } = refreshResponse.data;
-              await SecureStore.setItemAsync("accessToken", newAccessToken);
-              await SecureStore.setItemAsync("refreshToken", newRefreshToken);
-              
-              const retryResponse = await axios.get(`${getBackendUrl()}/api/users/profile`, {
-                headers: { Authorization: `Bearer ${newAccessToken}` }
-              });
+              const refreshResponse = await axios.post(
+                `${getBackendUrl()}/api/auth/refresh-token`,
+                { refreshToken },
+              );
+              const {
+                accessToken: newAccessToken,
+                refreshToken: newRefreshToken,
+              } = refreshResponse.data;
+              await AsyncStorage.setItem("accessToken", newAccessToken);
+              await AsyncStorage.setItem("refreshToken", newRefreshToken);
+
+              const retryResponse = await axios.get(
+                `${getBackendUrl()}/api/users/profile`,
+                {
+                  headers: { Authorization: `Bearer ${newAccessToken}` },
+                },
+              );
               const user = retryResponse.data;
+              const isComplete = !!(user.name && user.email);
+
+              await AsyncStorage.setItem("user", JSON.stringify(user));
+              await AsyncStorage.setItem(
+                "isProfileComplete",
+                isComplete.toString(),
+              );
+
               set({
                 isAuthenticated: true,
                 user,
                 token: newAccessToken,
-                isProfileComplete: !!(user.name && user.email),
+                isProfileComplete: isComplete,
               });
+            } else {
+              set({ isAuthenticated: false, user: null, token: null });
+              await AsyncStorage.multiRemove([
+                "accessToken",
+                "refreshToken",
+                "pushToken",
+                "user",
+                "isProfileComplete",
+              ]);
             }
           }
         }
       }
     } catch (e) {
-      console.log('Failed to initialize auth:', e);
+      console.log("Failed to initialize auth:", e);
     } finally {
       set({ isInitialized: true });
     }
-  }
+  },
 }));

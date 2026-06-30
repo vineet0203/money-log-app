@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, ScrollView, Text, TouchableOpacity, Modal, TextInput, Alert, ActivityIndicator, FlatList, RefreshControl } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Header from '../components/common/Header';
 import SearchBar from '../components/common/SearchBar';
@@ -33,9 +33,9 @@ const CustomMonthYearPicker = ({ visible, onClose, onSelect, currentDate }: any)
                     <TouchableOpacity 
                       key={m} 
                       onPress={() => setSelectedMonth(m)}
-                      className={`py-3 rounded-lg mb-1 ${selectedMonth === m ? 'bg-primary' : 'bg-gray-50'}`}
+                      className={`p-3 rounded-lg mb-1 ${selectedMonth === m ? 'bg-primary/20' : ''}`}
                     >
-                      <Text className={`text-center font-bold ${selectedMonth === m ? 'text-white' : 'text-gray-700'}`}>{m}</Text>
+                      <Text className={`text-center text-lg ${selectedMonth === m ? 'text-primary font-bold' : 'text-gray-700'}`}>{m}</Text>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
@@ -47,32 +47,32 @@ const CustomMonthYearPicker = ({ visible, onClose, onSelect, currentDate }: any)
               <Text className="text-gray-500 font-bold mb-2 text-center">Year</Text>
               <View className="h-48">
                 <ScrollView showsVerticalScrollIndicator={false}>
-                  {years.map(y => {
-                    const yStr = y.toString();
-                    return (
-                      <TouchableOpacity 
-                        key={yStr} 
-                        onPress={() => setSelectedYear(yStr)}
-                        className={`py-3 rounded-lg mb-1 ${selectedYear === yStr ? 'bg-primary' : 'bg-gray-50'}`}
-                      >
-                        <Text className={`text-center font-bold ${selectedYear === yStr ? 'text-white' : 'text-gray-700'}`}>{yStr}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
+                  {years.map(y => (
+                    <TouchableOpacity 
+                      key={y} 
+                      onPress={() => setSelectedYear(y.toString())}
+                      className={`p-3 rounded-lg mb-1 ${selectedYear === y.toString() ? 'bg-primary/20' : ''}`}
+                    >
+                      <Text className={`text-center text-lg ${selectedYear === y.toString() ? 'text-primary font-bold' : 'text-gray-700'}`}>{y}</Text>
+                    </TouchableOpacity>
+                  ))}
                 </ScrollView>
               </View>
             </View>
           </View>
 
-          <View className="flex-row gap-3">
-            <TouchableOpacity onPress={onClose} className="flex-1 p-4 rounded-xl bg-gray-100 items-center">
-              <Text className="font-bold text-gray-600">Cancel</Text>
+          <View className="flex-row justify-end space-x-4">
+            <TouchableOpacity onPress={onClose} className="px-4 py-2">
+              <Text className="text-gray-500 font-bold">Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              onPress={() => { onSelect(`${selectedMonth}/${selectedYear}`); onClose(); }} 
-              className="flex-1 p-4 rounded-xl bg-primary items-center"
+              onPress={() => {
+                onSelect(`${selectedMonth}/${selectedYear.toString().slice(-2)}`);
+                onClose();
+              }} 
+              className="bg-primary px-6 py-2 rounded-full"
             >
-              <Text className="font-bold text-white">Confirm</Text>
+              <Text className="text-white font-bold">Confirm</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -99,6 +99,12 @@ export default function AccountsScreen() {
   const addAccount = useAddAccount();
   const updateAccount = useUpdateAccount();
   const deleteAccount = useDeleteAccount();
+
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch])
+  );
 
   // Modal State
   const [modalVisible, setModalVisible] = useState(false);

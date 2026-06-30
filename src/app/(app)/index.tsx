@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { useState, useCallback } from 'react';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useAuthStore } from '../../store/authStore';
 import { useSubscriptions } from '../../api/subscriptions';
 import { useAccounts } from '../../api/accounts';
@@ -21,6 +21,14 @@ export default function Home() {
   const { data: upcomingBills, isLoading: isLoadingBills, refetch: refetchBills } = useSubscriptions({ upcomingDays: 15, limit: 3 });
   const { data: stats, refetch: refetchStats } = useTransactionStats();
 
+  useFocusEffect(
+    useCallback(() => {
+      refetchAccounts();
+      refetchBills();
+      refetchStats();
+    }, [refetchAccounts, refetchBills, refetchStats])
+  );
+
   const [refreshing, setRefreshing] = useState(false);
 
   const onRefresh = useCallback(async () => {
@@ -34,7 +42,7 @@ export default function Home() {
     setRefreshing(false);
   }, [refetchSubs, refetchAccounts, refetchBills, refetchStats]);
 
-  const displayName = user?.name || phoneNumber || "User";
+  const displayName = user?.name || "User";
 
   return (
     <View className="flex-1 bg-white">

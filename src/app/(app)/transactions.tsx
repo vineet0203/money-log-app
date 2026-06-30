@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity, ActivityIndicator, SectionList, RefreshControl } from 'react-native';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
+import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import SearchBar from '../../components/common/SearchBar';
 import TransactionCard from '../../components/cards/TransactionCard';
@@ -26,7 +27,14 @@ export default function Transactions() {
     isRefetching
   } = useTransactionsInfinite(typeFilter);
   
-  const { data: categories, isLoading: isCatLoading } = useCategories();
+  const { data: categories, isLoading: isCatLoading, refetch: refetchCats } = useCategories();
+
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+      refetchCats();
+    }, [refetch, refetchCats])
+  );
 
   const sections = useMemo(() => {
     const allTransactions = data?.pages.flatMap(page => page.data) || [];
@@ -56,7 +64,7 @@ export default function Transactions() {
       let subtitle = t.type === 'income' ? 'Income' : 'Expense';
 
       if (category) {
-        iconName = category.iconName;
+        iconName = category.iconName || category.icon_name;
         subtitle = category.name;
         // In reality, we'd apply category.color, but we stick to existing UI for now
       }
