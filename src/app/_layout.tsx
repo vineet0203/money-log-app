@@ -1,14 +1,14 @@
 import "../global.css";
 import { Stack } from "expo-router";
-import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from "react";
+import * as SplashScreen from "expo-splash-screen";
+import { useEffect, useState } from "react";
 import { usePushNotifications } from "../hooks/usePushNotifications";
-import Toast from 'react-native-toast-message';
-import { toastConfig } from '../components/ToastConfig';
+import Toast from "react-native-toast-message";
+import { toastConfig } from "../components/ToastConfig";
 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-import { useAuthStore } from '../store/authStore';
+import { useAuthStore } from "../store/authStore";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -26,21 +26,28 @@ const queryClient = new QueryClient({
 
 export default function Layout() {
   usePushNotifications(); // Request permissions and send token when logged in
-  
+
   const { initAuth, isInitialized } = useAuthStore();
+  const [minTimePassed, setMinTimePassed] = useState(false);
 
   useEffect(() => {
     initAuth();
+
+    // Ensure splash screen stays for at least 5 seconds
+    const timer = setTimeout(() => {
+      setMinTimePassed(true);
+    }, 2000);
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
-    if (isInitialized) {
-      // Hide the splash screen once the root layout has mounted and auth is hydrated
+    if (isInitialized && minTimePassed) {
+      // Hide the splash screen once auth is hydrated AND 5 seconds have passed
       SplashScreen.hideAsync();
     }
-  }, [isInitialized]);
+  }, [isInitialized, minTimePassed]);
 
-  if (!isInitialized) return null;
+  if (!isInitialized || !minTimePassed) return null;
   return (
     <QueryClientProvider client={queryClient}>
       <>

@@ -1,0 +1,37 @@
+diff --git a/node_modules/react-native-phone-number-input/node_modules/react-native-country-picker-modal/lib/AnimatedModal.js b/node_modules/react-native-phone-number-input/node_modules/react-native-country-picker-modal/lib/AnimatedModal.js
+index 01f0408..95115cb 100644
+--- a/node_modules/react-native-phone-number-input/node_modules/react-native-country-picker-modal/lib/AnimatedModal.js
++++ b/node_modules/react-native-phone-number-input/node_modules/react-native-country-picker-modal/lib/AnimatedModal.js
+@@ -25,6 +25,11 @@ export const AnimatedModal = ({ children, visible }) => {
+     }, [visible]);
+     return (React.createElement(Animated.View, { style: {
+             ...StyleSheet.absoluteFillObject,
++            top: '10%',
++            borderTopLeftRadius: 24,
++            borderTopRightRadius: 24,
++            overflow: 'hidden',
++            backgroundColor: '#ffffff',
+             transform: [{ translateY }],
+             zIndex: 99,
+         } }, children));
+diff --git a/node_modules/react-native-phone-number-input/node_modules/react-native-country-picker-modal/lib/CountryModal.js b/node_modules/react-native-phone-number-input/node_modules/react-native-country-picker-modal/lib/CountryModal.js
+index 1678e95..a03003c 100644
+--- a/node_modules/react-native-phone-number-input/node_modules/react-native-country-picker-modal/lib/CountryModal.js
++++ b/node_modules/react-native-phone-number-input/node_modules/react-native-country-picker-modal/lib/CountryModal.js
+@@ -1,5 +1,6 @@
+ import * as React from 'react';
+-import { SafeAreaView, StyleSheet, Platform } from 'react-native';
++import { StyleSheet, Platform } from 'react-native';
++import { SafeAreaView } from 'react-native-safe-area-context';
+ import { AnimatedModal } from './AnimatedModal';
+ import { Modal } from './Modal';
+ import { useTheme } from './CountryTheme';
+@@ -12,7 +13,7 @@ const styles = StyleSheet.create({
+ export const CountryModal = ({ children, withModal, disableNativeModal, ...props }) => {
+     const { backgroundColor } = useTheme();
+     const { teleport } = React.useContext(CountryModalContext);
+-    const content = (React.createElement(SafeAreaView, { style: [styles.container, { backgroundColor }] }, children));
++    const content = (React.createElement(SafeAreaView, { edges: Platform.OS === 'android' ? ['bottom', 'left', 'right'] : undefined, style: [styles.container, { backgroundColor, marginTop: Platform.OS === 'android' ? '10%' : 0, borderTopLeftRadius: Platform.OS === 'android' ? 24 : 0, borderTopRightRadius: Platform.OS === 'android' ? 24 : 0, overflow: 'hidden' }] }, children));
+     React.useEffect(() => {
+         if (disableNativeModal) {
+             teleport(React.createElement(AnimatedModal, Object.assign({}, props), content));

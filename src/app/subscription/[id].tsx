@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Subscription } from '../../types';
@@ -14,6 +15,7 @@ import { useUser } from '../../api/users';
 export default function SubscriptionDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const [isReminderOn, setIsReminderOn] = useState(false);
   const [reminderDays, setReminderDays] = useState(3);
@@ -289,7 +291,8 @@ export default function SubscriptionDetailScreen() {
           });
         }}
         activeOpacity={0.8}
-        className="absolute bottom-6 left-6 w-14 h-14 bg-slate-800 rounded-full items-center justify-center shadow-lg shadow-slate-800/40"
+        className="absolute left-6 w-14 h-14 bg-slate-800 rounded-full items-center justify-center shadow-lg shadow-slate-800/40"
+        style={{ bottom: insets.bottom + 24 }}
       >
         <Ionicons name="pencil" size={24} color="#FFF" />
       </TouchableOpacity>

@@ -9,19 +9,23 @@ interface FloatingActionButtonProps {
   bottomPosition?: number;
 }
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 export default function FloatingActionButton({ 
   onPress, 
   iconName = "add",
   label,
-  bottomPosition = 40
+  bottomPosition = 24
 }: FloatingActionButtonProps) {
+  const insets = useSafeAreaInsets();
+  
   return (
     <TouchableOpacity 
       onPress={onPress}
       activeOpacity={0.8}
       style={[
         styles.fab, 
-        { bottom: bottomPosition },
+        { bottom: bottomPosition + insets.bottom },
         label ? styles.extendedFab : styles.circularFab
       ]}
     >

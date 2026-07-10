@@ -46,34 +46,75 @@ authApi.interceptors.request.use(async (config) => {
   return config;
 });
 
+let isRefreshing = false;
+let failedQueue: { resolve: (value?: unknown) => void, reject: (reason?: any) => void }[] = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 authApi.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    
     if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        // If already refreshing, wait in the queue
+        try {
+          const token = await new Promise((resolve, reject) => {
+            failedQueue.push({ resolve, reject });
+          });
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return authApi(originalRequest);
+        } catch (err) {
+          return Promise.reject(err);
+        }
+      }
+
       originalRequest._retry = true;
+      isRefreshing = true;
+      
       try {
         const refreshToken = await AsyncStorage.getItem("refreshToken");
-        if (refreshToken) {
-          const refreshResponse = await axios.post(
-            `${getBackendUrl()}/api/auth/refresh-token`,
-            { refreshToken },
-          );
-          const { accessToken: newAccessToken, refreshToken: newRefreshToken } =
-            refreshResponse.data;
-
-          await AsyncStorage.setItem("accessToken", newAccessToken);
-          await AsyncStorage.setItem("refreshToken", newRefreshToken);
-
-          useAuthStore.setState({ token: newAccessToken });
-
-          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-          return axios(originalRequest);
+        if (!refreshToken) {
+          throw new Error("No refresh token");
         }
+
+        const refreshResponse = await axios.post(
+          `${getBackendUrl()}/api/auth/refresh-token`,
+          { refreshToken },
+        );
+        
+        const { accessToken: newAccessToken, refreshToken: newRefreshToken } = refreshResponse.data;
+
+        await AsyncStorage.setItem("accessToken", newAccessToken);
+        await AsyncStorage.setItem("refreshToken", newRefreshToken);
+
+        useAuthStore.setState({ token: newAccessToken });
+
+        // Resolve all queued requests with the new token
+        processQueue(null, newAccessToken);
+        
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+        return authApi(originalRequest);
+        
       } catch (e) {
+        processQueue(e, null);
         useAuthStore.getState().logout();
+        return Promise.reject(e);
+      } finally {
+        isRefreshing = false;
       }
     }
+    
     if (error.response?.status !== 401) {
       const message =
         error.response?.data?.error ||

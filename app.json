@@ -1,10 +1,10 @@
 {
   "expo": {
     "name": "Money Log",
-    "slug": "money-log",
+    "slug": "moneylog",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/logo.png",
+    "icon": "./assets/images/icon.png",
     "scheme": "moneylog",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -12,11 +12,11 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/logo.png",
-        "backgroundColor": "#FFFFFF"
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#6BCB77"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.moneylog.app",
+      "package": "com.moneylog",
       "googleServicesFile": "./google-services.json"
     },
     "web": {
@@ -29,11 +29,17 @@
         {
           "backgroundColor": "#FFFFFF",
           "image": "./assets/images/splash.png",
-          "imageWidth": 350
+          "imageWidth": 350,
+          "resizeMode": "contain"
         }
       ],
       "expo-secure-store"
     ],
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFFFF"
+    },
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
@@ -41,8 +47,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "3ebe17f1-6328-4af7-98c3-810156a823d1"
+        "projectId": "d5890453-0ac4-48a0-a03d-7d3b511af67a"
       }
-    }
+    },
+    "owner": "moneylogdevs-team"
   }
 }
