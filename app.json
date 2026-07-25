@@ -33,7 +33,19 @@
           "resizeMode": "contain"
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "15.1"
+          },
+          "android": {
+            "compileSdkVersion": 36,
+            "minSdkVersion": 26
+          }
+        }
+      ]
     ],
     "splash": {
       "image": "./assets/images/splash.png",

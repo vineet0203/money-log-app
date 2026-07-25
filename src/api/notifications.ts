@@ -15,7 +15,7 @@ export const useNotificationsInfinite = () => {
   return useInfiniteQuery({
     queryKey: ['notificationsInfinite'],
     queryFn: async ({ pageParam = 0 }) => {
-      const response = await apiClient.get('/api/notifications', {
+      const response = await apiClient.get('notifications', {
         params: { limit: 20, offset: pageParam },
       });
       return response.data;
@@ -29,7 +29,7 @@ export const useUnreadNotificationsCount = () => {
   return useQuery({
     queryKey: ['unreadNotificationsCount'],
     queryFn: async () => {
-      const response = await apiClient.get<{ unreadCount: number }>('/api/notifications/unread-count');
+      const response = await apiClient.get<{ unreadCount: number }>('notifications/unread-count');
       return response.data.unreadCount;
     },
     refetchInterval: 60000, // optionally auto-refresh every 60s
@@ -41,7 +41,7 @@ export const useMarkNotificationRead = () => {
   
   return useMutation({
     mutationFn: async (id: number) => {
-      const response = await apiClient.put(`/api/notifications/${id}/read`);
+      const response = await apiClient.put(`notifications/${id}/read`);
       return response.data;
     },
     onSuccess: () => {
@@ -56,7 +56,7 @@ export const useMarkAllNotificationsRead = () => {
   
   return useMutation({
     mutationFn: async () => {
-      const response = await apiClient.put('/api/notifications/read-all');
+      const response = await apiClient.put('notifications/read-all');
       return response.data;
     },
     onSuccess: () => {

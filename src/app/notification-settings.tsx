@@ -74,7 +74,7 @@ export default function NotificationsScreen() {
               </View>
               <View>
                 <Text className="text-base font-bold text-slate-800">SMS Alerts</Text>
-                <Text className="text-xs font-medium text-slate-400 mt-1">Receive text messages for bills</Text>
+                <Text className="text-xs text-slate-400 mt-0.5">Real-time SMS alerts on your device</Text>
               </View>
             </View>
             <CustomSwitch 
@@ -91,7 +91,7 @@ export default function NotificationsScreen() {
               </View>
               <View>
                 <Text className="text-base font-bold text-slate-800">Email Alerts</Text>
-                <Text className="text-xs font-medium text-slate-400 mt-1">Weekly summaries & statements</Text>
+                <Text className="text-xs text-slate-400 mt-0.5">Real-time Email alerts to your inbox</Text>
               </View>
             </View>
             <CustomSwitch 
@@ -108,7 +108,7 @@ export default function NotificationsScreen() {
               </View>
               <View>
                 <Text className="text-base font-bold text-slate-800">Push Notifications</Text>
-                <Text className="text-xs font-medium text-slate-400 mt-1">Real-time alerts on your device</Text>
+                <Text className="text-xs text-slate-400 mt-0.5">Real-time push alerts on your device</Text>
               </View>
             </View>
             <CustomSwitch 
@@ -119,9 +119,13 @@ export default function NotificationsScreen() {
 
         </View>
 
-        <Text className="text-xs text-slate-400 font-medium text-center px-4 leading-5">
-          By enabling SMS and Email alerts, you agree to receive automated notifications regarding your accounts and subscriptions. Carrier rates may apply.
-        </Text>
+        <View className="px-6 mt-8 mb-8">
+          <View className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <Text className="text-xs text-slate-500 text-center leading-relaxed">
+              <Text className="font-bold text-slate-600">Note:</Text> These are global settings. Even after enabling them here, you must also configure notification preferences for each individual subscription to receive its alerts. Carrier rates may apply.
+            </Text>
+          </View>
+        </View>
 
       </ScrollView>
     </View>

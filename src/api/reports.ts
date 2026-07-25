@@ -22,7 +22,7 @@ export const useMonthlyReport = (year?: number, month?: number) => {
   return useQuery({
     queryKey: ['reports', 'monthly', year, month],
     queryFn: async (): Promise<MonthlyReport> => {
-      let url = '/api/reports/monthly';
+      let url = 'reports/monthly';
       if (year && month) {
         url += `?year=${year}&month=${month}`;
       }

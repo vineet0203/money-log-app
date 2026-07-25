@@ -1,4 +1,5 @@
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useState, useCallback } from 'react';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useAuthStore } from '../../store/authStore';
@@ -123,10 +124,18 @@ export default function Home() {
             />
           ))
         ) : (
-          <View className="bg-gray-50 rounded-xl p-6 items-center justify-center border border-gray-100 border-dashed mt-2">
-            <Text className="text-gray-400 text-center mb-2">No accounts added yet.</Text>
-            <TouchableOpacity onPress={() => router.push('/accounts')}>
-              <Text className="text-primary font-bold">Add Account</Text>
+          <View className="bg-emerald-50 rounded-2xl p-6 items-center justify-center border border-emerald-100 border-dashed mt-2 mb-2">
+            <Ionicons name="business" size={36} color="#10B981" className="mb-3" />
+            <Text className="text-gray-800 text-center font-extrabold mb-1.5 text-base">Connect Your Bank</Text>
+            <Text className="text-gray-500 text-center mb-5 text-sm leading-5 px-2">
+              Securely link your accounts to automatically track your balances and transactions.
+            </Text>
+            <TouchableOpacity 
+              onPress={() => router.push('/accounts')}
+              className="bg-emerald-500 px-6 py-3 rounded-full flex-row items-center shadow-sm shadow-emerald-200"
+            >
+              <Text className="text-white font-bold mr-2 text-[15px]">Visit Accounts Page</Text>
+              <Ionicons name="arrow-forward" size={16} color="#FFF" />
             </TouchableOpacity>
           </View>
         )}

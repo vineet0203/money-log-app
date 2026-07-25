@@ -40,7 +40,7 @@ export default function TransactionDetailsScreen() {
   const amountColor = isExpense ? 'text-red-500' : 'text-primary';
   const iconColor = transaction.category_color || '#94A3B8';
   const iconName = transaction.category_icon || (isExpense ? 'cart' : 'cash');
-  const receiptUrl = transaction.receipt_url ? `${getBackendUrl()}${transaction.receipt_url}` : null;
+  const receiptUrl = transaction.receipt_url || null;
 
   return (
     <View className="flex-1 bg-slate-50">

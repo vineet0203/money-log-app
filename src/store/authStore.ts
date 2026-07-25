@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import axios from "axios";
-import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Toast from "react-native-toast-message";
 
@@ -26,11 +25,8 @@ interface AuthState {
 }
 
 export const getBackendUrl = () => {
-  // If you are testing on a PHYSICAL device with Expo Go, use your computer's local Wi-Fi IP:
-  return "https://moneylog.com/api";
-
-  // If you are running on an Android Emulator on your computer screen, uncomment this instead:
-  // return 'http://10.0.2.2:5001';
+  const url = process.env.EXPO_PUBLIC_API_URL || '';
+  return url.endsWith('/') ? url : url + '/';
 };
 
 // Setup global axios instance/interceptor for the auth store
@@ -89,7 +85,7 @@ authApi.interceptors.response.use(
         }
 
         const refreshResponse = await axios.post(
-          `${getBackendUrl()}/api/auth/refresh-token`,
+          `${getBackendUrl()}auth/refresh-token`,
           { refreshToken },
         );
         
@@ -140,7 +136,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   sendOtp: async (phone: string) => {
     try {
-      await authApi.post("/api/auth/send-otp", { phone });
+      await authApi.post("auth/send-otp", { phone });
       set({ phoneNumber: phone, isOtpSent: true });
       return { success: true };
     } catch (error: any) {
@@ -157,7 +153,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { phoneNumber } = get();
 
     try {
-      const response = await authApi.post("/api/auth/verify-otp", {
+      const response = await authApi.post("auth/verify-otp", {
         phone: phoneNumber,
         code,
       });
@@ -197,13 +193,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     try {
       if (data instanceof FormData) {
-        await authApi.put("/api/users/profile", data, {
+        await authApi.put("users/profile", data, {
           headers: {
             "Content-Type": "multipart/form-data",
           },
         });
       } else {
-        await authApi.post("/api/auth/complete-profile", data);
+        await authApi.post("auth/complete-profile", data);
       }
 
       await AsyncStorage.setItem("isProfileComplete", "true");
@@ -230,7 +226,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const pushToken = await AsyncStorage.getItem("pushToken");
       const refreshToken = await AsyncStorage.getItem("refreshToken");
       if (refreshToken || pushToken) {
-        await authApi.post("/api/auth/logout", { refreshToken, pushToken });
+        await authApi.post("auth/logout", { refreshToken, pushToken });
       }
     } catch (e) {
       console.log("Error during backend logout API call:", e);
@@ -256,88 +252,108 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isInitialized: false,
   initAuth: async () => {
     try {
-      const token = await AsyncStorage.getItem("accessToken");
+      let currentToken = await AsyncStorage.getItem("accessToken");
       const storedUserStr = await AsyncStorage.getItem("user");
       const storedProfileCompleteStr =
         await AsyncStorage.getItem("isProfileComplete");
 
-      if (token) {
-        // Optimistically set the state from local cache
-        if (storedUserStr) {
-          set({
-            isAuthenticated: true,
-            user: JSON.parse(storedUserStr),
-            token,
-            isProfileComplete: storedProfileCompleteStr === "true",
-          });
-        }
+      if (!currentToken) {
+        // No token at all, user is not logged in
+        set({ isInitialized: true });
+        return;
+      }
 
-        try {
-          const response = await authApi.get("/api/users/profile");
-          const user = response.data;
-          const isComplete = !!(user.name && user.email);
+      // Optimistically set the state from local cache so the UI doesn't flash
+      if (storedUserStr) {
+        set({
+          isAuthenticated: true,
+          user: JSON.parse(storedUserStr),
+          token: currentToken,
+          isProfileComplete: storedProfileCompleteStr === "true",
+        });
+      }
 
-          await AsyncStorage.setItem("user", JSON.stringify(user));
-          await AsyncStorage.setItem(
-            "isProfileComplete",
-            isComplete.toString(),
-          );
-
-          set({
-            isAuthenticated: true,
-            user,
-            token,
-            isProfileComplete: isComplete,
-          });
-        } catch (error: any) {
-          if (error.response?.status === 401) {
-            const refreshToken = await AsyncStorage.getItem("refreshToken");
-            if (refreshToken) {
-              const refreshResponse = await axios.post(
-                `${getBackendUrl()}/api/auth/refresh-token`,
-                { refreshToken },
-              );
-              const {
-                accessToken: newAccessToken,
-                refreshToken: newRefreshToken,
-              } = refreshResponse.data;
-              await AsyncStorage.setItem("accessToken", newAccessToken);
-              await AsyncStorage.setItem("refreshToken", newRefreshToken);
-
-              const retryResponse = await axios.get(
-                `${getBackendUrl()}/api/users/profile`,
-                {
-                  headers: { Authorization: `Bearer ${newAccessToken}` },
-                },
-              );
-              const user = retryResponse.data;
-              const isComplete = !!(user.name && user.email);
-
-              await AsyncStorage.setItem("user", JSON.stringify(user));
-              await AsyncStorage.setItem(
-                "isProfileComplete",
-                isComplete.toString(),
-              );
-
-              set({
-                isAuthenticated: true,
-                user,
-                token: newAccessToken,
-                isProfileComplete: isComplete,
-              });
-            } else {
-              set({ isAuthenticated: false, user: null, token: null });
-              await AsyncStorage.multiRemove([
-                "accessToken",
-                "refreshToken",
-                "pushToken",
-                "user",
-                "isProfileComplete",
-              ]);
-            }
+      // Try to fetch the profile with the current access token
+      // IMPORTANT: Use plain axios here, NOT authApi, to avoid the response
+      // interceptor racing with our own refresh logic below.
+      let profileResponse;
+      try {
+        profileResponse = await axios.get(
+          `${getBackendUrl()}users/profile`,
+          { headers: { Authorization: `Bearer ${currentToken}` } },
+        );
+      } catch (error: any) {
+        if (error.response?.status === 401) {
+          // Access token expired — try to refresh it
+          const refreshToken = await AsyncStorage.getItem("refreshToken");
+          if (!refreshToken) {
+            // No refresh token either, force logout
+            await AsyncStorage.multiRemove([
+              "accessToken",
+              "refreshToken",
+              "pushToken",
+              "user",
+              "isProfileComplete",
+            ]);
+            set({ isAuthenticated: false, user: null, token: null });
+            return;
           }
+
+          try {
+            const refreshResponse = await axios.post(
+              `${getBackendUrl()}auth/refresh-token`,
+              { refreshToken },
+            );
+            const {
+              accessToken: newAccessToken,
+              refreshToken: newRefreshToken,
+            } = refreshResponse.data;
+
+            await AsyncStorage.setItem("accessToken", newAccessToken);
+            await AsyncStorage.setItem("refreshToken", newRefreshToken);
+            currentToken = newAccessToken;
+
+            // Retry profile fetch with the new token
+            profileResponse = await axios.get(
+              `${getBackendUrl()}users/profile`,
+              { headers: { Authorization: `Bearer ${newAccessToken}` } },
+            );
+          } catch (refreshError) {
+            // Refresh token is also invalid/expired, force logout
+            console.log("Refresh token invalid, logging out:", refreshError);
+            await AsyncStorage.multiRemove([
+              "accessToken",
+              "refreshToken",
+              "pushToken",
+              "user",
+              "isProfileComplete",
+            ]);
+            set({ isAuthenticated: false, user: null, token: null });
+            return;
+          }
+        } else {
+          // Non-401 error (e.g. network error) — keep user logged in with cached data
+          console.log("Network error during initAuth, using cached data:", error.message);
+          return;
         }
       }
+
+      // If we got here, we have a valid profile response
+      const user = profileResponse.data;
+      const isComplete = !!(user.name && user.email);
+
+      await AsyncStorage.setItem("user", JSON.stringify(user));
+      await AsyncStorage.setItem(
+        "isProfileComplete",
+        isComplete.toString(),
+      );
+
+      set({
+        isAuthenticated: true,
+        user,
+        token: currentToken,
+        isProfileComplete: isComplete,
+      });
     } catch (e) {
       console.log("Failed to initialize auth:", e);
     } finally {

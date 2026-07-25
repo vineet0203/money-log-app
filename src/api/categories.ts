@@ -25,7 +25,7 @@ export const useCategories = () => {
   return useQuery({
     queryKey: ['categories'],
     queryFn: async (): Promise<Category[]> => {
-      const response = await apiClient.get('/api/categories');
+      const response = await apiClient.get('categories');
       return response.data.map((cat: any) => ({
         id: cat.id.toString(),
         name: cat.name,
@@ -43,7 +43,7 @@ export const useAddCategory = () => {
   
   return useMutation({
     mutationFn: async (newCategory: AddCategoryData) => {
-      const response = await apiClient.post('/api/categories', newCategory);
+      const response = await apiClient.post('categories', newCategory);
       return response.data;
     },
     onSuccess: () => {
@@ -58,7 +58,7 @@ export const useUpdateCategory = () => {
   return useMutation({
     mutationFn: async (category: UpdateCategoryData) => {
       const { id, ...data } = category;
-      const response = await apiClient.put(`/api/categories/${id}`, data);
+      const response = await apiClient.put(`categories/${id}`, data);
       return response.data;
     },
     onSuccess: () => {
@@ -72,7 +72,7 @@ export const useDeleteCategory = () => {
   
   return useMutation({
     mutationFn: async (id: string | number) => {
-      const response = await apiClient.delete(`/api/categories/${id}`);
+      const response = await apiClient.delete(`categories/${id}`);
       return response.data;
     },
     onSuccess: () => {

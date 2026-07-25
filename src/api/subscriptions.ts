@@ -61,7 +61,7 @@ export const useSubscriptions = (optionsOrLimit?: number | { limit?: number, off
   return useQuery({
     queryKey: ['subscriptions', limit, offset, upcomingDays],
     queryFn: async (): Promise<Subscription[]> => {
-      const response = await apiClient.get('/api/subscriptions', {
+      const response = await apiClient.get('subscriptions', {
         params: { limit, offset, upcoming_days: upcomingDays }
       });
       // Handle the case where backend returns { data, nextOffset } instead of an array
@@ -74,7 +74,7 @@ export const useSubscriptionsInfinite = (options?: { upcomingDays?: number }) =>
   return useInfiniteQuery({
     queryKey: ['subscriptionsInfinite', options?.upcomingDays],
     queryFn: async ({ pageParam = 0 }) => {
-      const response = await apiClient.get('/api/subscriptions', {
+      const response = await apiClient.get('subscriptions', {
         params: { limit: 20, offset: pageParam, upcoming_days: options?.upcomingDays },
       });
       return response.data; // { data: Subscription[], nextOffset: number | null }
@@ -88,7 +88,7 @@ export const useSubscriptionDetails = (id: string | number) => {
   return useQuery({
     queryKey: ['subscriptionDetails', id],
     queryFn: async () => {
-      const response = await apiClient.get(`/api/subscriptions/${id}/details`);
+      const response = await apiClient.get(`subscriptions/${id}/details`);
       return response.data;
     },
     enabled: !!id,
@@ -100,7 +100,7 @@ export const useAddSubscription = () => {
   
   return useMutation({
     mutationFn: async (newSubscription: AddSubscriptionData) => {
-      const response = await apiClient.post('/api/subscriptions', newSubscription);
+      const response = await apiClient.post('subscriptions', newSubscription);
       return response.data;
     },
     onSuccess: () => {
@@ -116,7 +116,7 @@ export const useUpdateSubscription = () => {
   return useMutation({
     mutationFn: async (subscription: UpdateSubscriptionData) => {
       const { id, ...data } = subscription;
-      const response = await apiClient.put(`/api/subscriptions/${id}`, data);
+      const response = await apiClient.put(`subscriptions/${id}`, data);
       return response.data;
     },
     onSuccess: () => {
@@ -132,7 +132,7 @@ export const usePaySubscription = () => {
   
   return useMutation({
     mutationFn: async (id: number | string) => {
-      const response = await apiClient.post(`/api/subscriptions/${id}/pay`);
+      const response = await apiClient.post(`subscriptions/${id}/pay`);
       return response.data;
     },
     onSuccess: () => {
@@ -152,7 +152,7 @@ export const useDeleteSubscription = () => {
   
   return useMutation({
     mutationFn: async (id: number) => {
-      const response = await apiClient.delete(`/api/subscriptions/${id}`);
+      const response = await apiClient.delete(`subscriptions/${id}`);
       return response.data;
     },
     onSuccess: () => {

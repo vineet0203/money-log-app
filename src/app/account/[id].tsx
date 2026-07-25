@@ -1,60 +1,86 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Platform } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Platform, Image } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import Header from '../../components/common/Header';
+import AccountBalanceChart from '../../components/charts/AccountBalanceChart';
+import BankLogo from '../../components/common/BankLogo';
 import TransactionCard from '../../components/cards/TransactionCard';
 import { Account, Transaction } from '../../types';
 
-import { useAccounts } from '../../api/accounts';
+import { useAccounts, useSyncBalance, useAccountTransactions } from '../../api/accounts';
 
 export default function AccountDetailScreen() {
   const { id } = useLocalSearchParams();
+  const router = useRouter();
   const { data: accounts } = useAccounts();
   const account = accounts?.find(a => a.id.toString() === id);
-
-  if (!account) return null;
+  const syncBalance = useSyncBalance();
 
   const [isBalanceVisible, setIsBalanceVisible] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(0);
 
   // DatePicker State
-  const [isDownloadModalVisible, setDownloadModalVisible] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [datePickerMode, setDatePickerMode] = useState<'start' | 'end'>('start');
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
 
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    setTimeout(() => {
-      setIsRefreshing(false);
-    }, 1500);
-  };
+  React.useEffect(() => {
+    if (!account) return;
+    if (account.provider !== 'plaid') return;
+    
+    const calculateTimeLeft = () => {
+      const dateString = account.last_balance_sync || account.updated_at || account.created_at;
+      if (!dateString) return 0;
+      
+      const lastUpdated = new Date(dateString).getTime();
+      const now = Date.now();
+      const diffSeconds = Math.floor((now - lastUpdated) / 1000);
+      const remaining = 90 - diffSeconds;
+      return remaining > 0 ? remaining : 0;
+    };
 
-  const openDownloadModal = () => {
-    setStartDate(null);
-    setEndDate(null);
-    setDownloadModalVisible(true);
-  };
-
-  const handleFinalDownload = () => {
-    if (!startDate || !endDate) {
-      Alert.alert('Missing Dates', 'Please select both a start and end date.');
-      return;
+    setTimeLeft(calculateTimeLeft());
+    
+    let interval: NodeJS.Timeout;
+    if (calculateTimeLeft() > 0) {
+      interval = setInterval(() => {
+        const remaining = calculateTimeLeft();
+        setTimeLeft(remaining);
+        if (remaining <= 0) {
+          clearInterval(interval);
+        }
+      }, 1000);
     }
-    setDownloadModalVisible(false);
-    setTimeout(() => {
-      Alert.alert(
-        'Download Started', 
-        `Exporting ${account.name} transactions from ${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()} as PDF.`
-      );
-    }, 500);
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [account?.last_balance_sync, account?.updated_at, account?.created_at, account?.provider]);
+
+  const { data: transactionsData, isLoading: isLoadingTxns, hasNextPage, fetchNextPage, isFetchingNextPage } = useAccountTransactions(account?.id || 0);
+  const transactions = transactionsData?.pages.flatMap(p => p.data) || [];
+
+  if (!account) return null;
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await syncBalance.mutateAsync(account.id);
+    } catch (err: any) {
+      console.error('Failed to sync balance:', err);
+      const errorMessage = err.response?.data?.error || 'Failed to fetch latest balance from bank.';
+      Alert.alert('Refresh Error', errorMessage);
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
-    setShowDatePicker(Platform.OS === 'ios'); // Keep open on iOS until confirmed, close on Android
+    setShowDatePicker(Platform.OS === 'ios'); 
     
     if (event.type === 'dismissed' || !selectedDate) {
       setShowDatePicker(false);
@@ -72,39 +98,42 @@ export default function AccountDetailScreen() {
     }
   };
 
-  // Mock Transactions
-  const pastTransactions: Transaction[] = [
-    {
-      id: 'tx1',
-      title: 'Groceries',
-      subtitle: 'Whole Foods Market',
-      amount: -120.50,
-      type: 'expense',
-      date: 'Today',
-      iconName: 'cart',
-      iconBgColor: 'bg-orange-500'
-    },
-    {
-      id: 'tx2',
-      title: 'Salary Deposit',
-      subtitle: 'Tech Corp Inc.',
-      amount: 4500.00,
-      type: 'income',
-      date: 'Yesterday',
-      iconName: 'cash',
-      iconBgColor: 'bg-emerald-500'
-    },
-    {
-      id: 'tx3',
-      title: 'Coffee Shop',
-      subtitle: 'Starbucks',
-      amount: -6.40,
-      type: 'expense',
-      date: 'Oct 12, 2023',
-      iconName: 'cafe',
-      iconBgColor: 'bg-amber-700'
-    }
-  ];
+  // Plaid Data Extraction
+  let plaidData: any = {};
+  if (typeof account.plaid_raw_data === 'string') {
+    try {
+      plaidData = JSON.parse(account.plaid_raw_data);
+    } catch(e) {}
+  } else if (account.plaid_raw_data) {
+    plaidData = account.plaid_raw_data;
+  }
+  
+  const balances = plaidData.balances || {};
+  
+  // Use native SQL columns if available, otherwise fallback to parsing JSON
+  const availableBalance = account.available_balance !== undefined ? account.available_balance : balances.available;
+  const currentBalance = account.balance;
+  const creditLimit = account.credit_limit !== undefined ? account.credit_limit : balances.limit;
+  
+  const currencyCode = account.currency || balances.iso_currency_code || 'USD';
+  const officialName = plaidData.official_name || account.name;
+  const subtype = account.subtype || plaidData.subtype || account.type;
+  
+  const formatCurrency = (val: number | null | undefined) => {
+    if (val === null || val === undefined) return 'N/A';
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: currencyCode }).format(val);
+  };
+
+  // Determine display balance (prefer available for checking, current for credit)
+  let displayBalance = currentBalance;
+  let balanceLabel = 'Current Balance';
+  if (account.type === 'depository' && availableBalance !== null && availableBalance !== undefined) {
+    displayBalance = availableBalance;
+    balanceLabel = 'Available Balance';
+  } else if (account.type === 'credit') {
+    displayBalance = currentBalance;
+    balanceLabel = 'Current Balance';
+  }
 
   return (
     <View className="flex-1 bg-slate-50">
@@ -115,6 +144,20 @@ export default function AccountDetailScreen() {
         {/* Top Banner / Logo */}
         <View className="items-center bg-white rounded-3xl p-8 mb-6 shadow-sm shadow-slate-100 border border-slate-100 relative">
           
+          {/* Last Synced (Top Left) */}
+          <View className="absolute top-5 left-5">
+            <Text className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Last Synced</Text>
+            <Text className="text-xs font-bold text-slate-600 mt-0.5">
+              {account.last_balance_sync 
+                ? new Date(account.last_balance_sync).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) 
+                : (account.updated_at 
+                    ? new Date(account.updated_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })
+                    : 'Just now'
+                  )
+              }
+            </Text>
+          </View>
+
           {/* Action Buttons (Eye & Refresh) top right of card */}
           <View className="absolute top-4 right-4 flex-row">
             <TouchableOpacity 
@@ -126,11 +169,13 @@ export default function AccountDetailScreen() {
 
             <TouchableOpacity 
               onPress={handleRefresh}
-              disabled={isRefreshing}
+              disabled={isRefreshing || timeLeft > 0}
               className="w-10 h-10 items-center justify-center rounded-full bg-slate-50 border border-slate-100"
             >
               {isRefreshing ? (
                 <ActivityIndicator size="small" color="#64748B" />
+              ) : timeLeft > 0 ? (
+                <Text className="text-[10px] font-bold text-gray-400">{timeLeft}s</Text>
               ) : (
                 <Ionicons name="refresh" size={20} color="#64748B" />
               )}
@@ -142,18 +187,24 @@ export default function AccountDetailScreen() {
             let logoName: any = 'business';
             let logoBgColor = 'bg-blue-700';
 
-            if (account.type === 'card') {
+            if (subtype === 'credit card' || account.type === 'credit') {
               logoName = 'card';
               logoBgColor = 'bg-slate-800';
-            } else if (account.type === 'wallet') {
+            } else if (subtype === 'checking' || subtype === 'savings') {
               logoName = 'wallet';
               logoBgColor = 'bg-emerald-600';
             }
 
             return (
               <>
-                <View className={`w-20 h-20 rounded-3xl items-center justify-center mb-4 shadow-sm shadow-slate-300 mt-6 ${logoBgColor}`}>
-                  <Ionicons name={logoName} size={40} color="#FFF" />
+                <View className="items-center justify-center mt-6 mb-4">
+                  <BankLogo
+                    institutionName={account.name}
+                    logoBase64={account.logo}
+                    color={account.color}
+                    size={80}
+                    fallbackIcon={logoName}
+                  />
                 </View>
                 <Text className="text-2xl font-extrabold text-slate-800 mb-1 text-center">{account.name}</Text>
                 <Text className="text-sm font-medium text-slate-400 tracking-[0.2em] mb-4">**** **** **** {last4}</Text>
@@ -162,9 +213,10 @@ export default function AccountDetailScreen() {
           })()}
           
           {/* Balance */}
+          <Text className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 mt-2 text-center">{balanceLabel}</Text>
           {isBalanceVisible ? (
             <Text className="text-4xl font-extrabold text-primary">
-              $0.00
+              {formatCurrency(displayBalance)}
             </Text>
           ) : (
             <Text className="text-4xl font-extrabold text-slate-400 tracking-widest">
@@ -173,85 +225,107 @@ export default function AccountDetailScreen() {
           )}
         </View>
 
-        {/* Download Statement Button */}
-        <TouchableOpacity 
-          onPress={openDownloadModal}
-          activeOpacity={0.8}
-          className="flex-row items-center justify-center bg-slate-800 rounded-2xl py-4 mb-8 shadow-sm shadow-slate-800/30"
-        >
-          <Ionicons name="download-outline" size={20} color="#FFF" className="mr-2" />
-          <Text className="text-white font-bold text-base ml-2">Download Statement</Text>
-        </TouchableOpacity>
+        {/* Account Info Card */}
+        <View className="bg-white rounded-3xl p-6 mb-6 shadow-sm shadow-slate-100 border border-slate-100">
+          <Text className="text-base font-extrabold text-slate-800 mb-4">Account Information</Text>
+          
+          <View className="flex-row justify-between py-3 border-b border-slate-50">
+            <Text className="text-slate-500 font-medium">Official Name</Text>
+            <Text className="text-slate-800 font-bold max-w-[60%] text-right">{officialName}</Text>
+          </View>
+          
+          <View className="flex-row justify-between py-3 border-b border-slate-50">
+            <Text className="text-slate-500 font-medium">Account Type</Text>
+            <Text className="text-slate-800 font-bold capitalize">{subtype}</Text>
+          </View>
+
+          {creditLimit !== null && creditLimit !== undefined && (
+            <View className="flex-row justify-between py-3 border-b border-slate-50">
+              <Text className="text-slate-500 font-medium">Credit Limit</Text>
+              <Text className="text-slate-800 font-bold">{formatCurrency(creditLimit)}</Text>
+            </View>
+          )}
+
+          {currentBalance !== null && currentBalance !== undefined && availableBalance !== null && availableBalance !== undefined && (
+            <View className="flex-row justify-between py-3 border-b border-slate-50">
+              <Text className="text-slate-500 font-medium">Current Balance</Text>
+              <Text className="text-slate-800 font-bold">{formatCurrency(currentBalance)}</Text>
+            </View>
+          )}
+
+          <View className="flex-row justify-between py-3">
+            <Text className="text-slate-500 font-medium">Currency</Text>
+            <Text className="text-slate-800 font-bold">{currencyCode}</Text>
+          </View>
+        </View>
 
         {/* Transaction History */}
         <View className="flex-row justify-between items-center mb-4 px-1">
           <Text className="text-base font-extrabold text-slate-800">Recent Transactions</Text>
-          <TouchableOpacity className="bg-primary/10 px-3 py-1.5 rounded-full flex-row items-center">
-            <Ionicons name="sync" size={14} color="#6BCB77" />
-            <Text className="text-primary font-bold text-xs ml-1">Fetch (30 Days)</Text>
-          </TouchableOpacity>
         </View>
         
-        <View className="bg-white rounded-3xl p-8 items-center justify-center shadow-sm shadow-slate-100 border border-slate-200 border-dashed">
-          <Ionicons name="receipt-outline" size={48} color="#CBD5E1" />
-          <Text className="text-slate-400 font-medium text-center mt-3">No transactions synced yet.</Text>
-          <Text className="text-slate-400 text-xs text-center mt-1">Tap fetch to sync recent history.</Text>
-        </View>
+        {isLoadingTxns ? (
+          <Text className="text-center py-10 text-slate-500">Loading transactions...</Text>
+        ) : transactions.length === 0 ? (
+          <View className="bg-white rounded-3xl p-8 items-center justify-center shadow-sm shadow-slate-100 border border-slate-200 border-dashed">
+            <Ionicons name="receipt-outline" size={48} color="#CBD5E1" />
+            <Text className="text-slate-400 font-medium text-center mt-3">No transactions synced yet.</Text>
+            <Text className="text-slate-400 text-xs text-center mt-1">Go to Accounts list to Sync Transactions.</Text>
+          </View>
+        ) : (
+          <View className="bg-white rounded-3xl p-2 shadow-sm shadow-slate-100 border border-slate-100 mb-6">
+            {transactions.map((txn, index) => (
+              <TouchableOpacity 
+                key={txn.id}
+                onPress={() => router.push(`/bank-transaction/${txn.id}`)}
+                activeOpacity={0.7}
+                className={`flex-row items-center p-4 ${index !== transactions.length - 1 ? 'border-b border-slate-50' : ''}`}
+              >
+                <View className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-100 items-center justify-center overflow-hidden mr-3">
+                  {txn.logo_url ? (
+                    <Image source={{ uri: txn.logo_url }} className="w-8 h-8 rounded-full" resizeMode="cover" />
+                  ) : (
+                    <Ionicons name="cart" size={20} color="#94A3B8" />
+                  )}
+                </View>
+                <View className="flex-1 pr-2">
+                  <Text className="text-slate-800 font-bold text-base leading-tight" numberOfLines={1}>
+                    {txn.merchant_name || txn.name}
+                  </Text>
+                  <Text className="text-slate-500 font-medium text-xs mt-1">
+                    {new Date(txn.date).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+                    {txn.pending ? ' • Pending' : ''}
+                  </Text>
+                </View>
+                <View className="items-end justify-center">
+                  <Text className={`font-extrabold text-base ${txn.amount > 0 ? 'text-slate-800' : 'text-emerald-500'}`}>
+                    {txn.amount > 0 ? '-' : '+'}{formatCurrency(Math.abs(txn.amount))}
+                  </Text>
+                  {txn.primary_category && (
+                    <Text className="text-slate-400 font-bold text-[9px] mt-1 uppercase tracking-wider">
+                      {txn.primary_category.replace(/_/g, ' ')}
+                    </Text>
+                  )}
+                </View>
+              </TouchableOpacity>
+            ))}
+            {hasNextPage && (
+              <TouchableOpacity 
+                onPress={() => fetchNextPage()} 
+                disabled={isFetchingNextPage}
+                className="py-4 mt-2 items-center justify-center border-t border-slate-50"
+              >
+                {isFetchingNextPage ? (
+                  <ActivityIndicator size="small" color="#6BCB77" />
+                ) : (
+                  <Text className="text-primary font-bold text-sm">Load More Transactions</Text>
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
       </ScrollView>
-
-      {/* Download Configuration Modal Overlay */}
-      {isDownloadModalVisible && (
-        <View className="absolute top-0 left-0 right-0 bottom-0 bg-black/50 z-50 justify-end">
-          <View className="bg-white rounded-t-3xl pt-6 pb-10 px-5">
-            <View className="flex-row items-center justify-between border-b border-slate-100 pb-4 mb-6">
-              <Text className="text-xl font-extrabold text-slate-800">Export Statement</Text>
-              <TouchableOpacity onPress={() => setDownloadModalVisible(false)}>
-                <Ionicons name="close" size={24} color="#64748B" />
-              </TouchableOpacity>
-            </View>
-
-            <Text className="text-sm font-bold text-slate-500 mb-2 uppercase tracking-wider ml-1">Start Date</Text>
-            <TouchableOpacity 
-              onPress={() => { setDatePickerMode('start'); setShowDatePicker(true); }}
-              className="flex-row items-center justify-between bg-slate-50 border border-slate-200 rounded-2xl p-4 mb-4"
-            >
-              <View className="flex-row items-center">
-                <Ionicons name="calendar" size={20} color="#3B82F6" className="mr-3" />
-                <Text className={`text-base font-bold ml-2 ${startDate ? 'text-slate-800' : 'text-slate-400'}`}>
-                  {startDate ? startDate.toLocaleDateString() : 'Select Start Date'}
-                </Text>
-              </View>
-              <Ionicons name="chevron-down" size={20} color="#94A3B8" />
-            </TouchableOpacity>
-
-            <Text className="text-sm font-bold text-slate-500 mb-2 uppercase tracking-wider ml-1">End Date</Text>
-            <TouchableOpacity 
-              onPress={() => { setDatePickerMode('end'); setShowDatePicker(true); }}
-              className="flex-row items-center justify-between bg-slate-50 border border-slate-200 rounded-2xl p-4 mb-8"
-            >
-              <View className="flex-row items-center">
-                <Ionicons name="calendar" size={20} color="#EF4444" className="mr-3" />
-                <Text className={`text-base font-bold ml-2 ${endDate ? 'text-slate-800' : 'text-slate-400'}`}>
-                  {endDate ? endDate.toLocaleDateString() : 'Select End Date'}
-                </Text>
-              </View>
-              <Ionicons name="chevron-down" size={20} color="#94A3B8" />
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              onPress={handleFinalDownload}
-              activeOpacity={0.8}
-              className={`rounded-full py-4 items-center shadow-sm ${startDate && endDate ? 'bg-primary shadow-primary/30' : 'bg-slate-200'}`}
-              disabled={!startDate || !endDate}
-            >
-              <Text className={`font-extrabold text-lg tracking-wide ${startDate && endDate ? 'text-white' : 'text-slate-400'}`}>
-                Download Now
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
 
       {/* Date Picker Overlay */}
       {showDatePicker && (

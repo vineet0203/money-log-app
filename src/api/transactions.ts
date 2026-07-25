@@ -18,7 +18,7 @@ export const useTransactionStats = () => {
   return useQuery({
     queryKey: ['transactionStats'],
     queryFn: async () => {
-      const response = await apiClient.get('/api/transactions/stats');
+      const response = await apiClient.get('transactions/stats');
       return response.data as { income: number; expense: number; balance: number };
     },
   });
@@ -28,7 +28,7 @@ export const useTransactionsInfinite = (type: string = 'all') => {
   return useInfiniteQuery({
     queryKey: ['transactions', type],
     queryFn: async ({ pageParam = 0 }) => {
-      const response = await apiClient.get('/api/transactions', {
+      const response = await apiClient.get('transactions', {
         params: { limit: 20, offset: pageParam, type },
       });
       return response.data;
@@ -42,7 +42,7 @@ export const useTransaction = (id: string | number) => {
   return useQuery({
     queryKey: ['transaction', id],
     queryFn: async () => {
-      const response = await apiClient.get(`/api/transactions/${id}`);
+      const response = await apiClient.get(`transactions/${id}`);
       return response.data;
     },
     enabled: !!id,
@@ -57,13 +57,13 @@ export const useAddTransaction = () => {
     mutationFn: async (data: FormData | any) => {
       let response;
       if (data instanceof FormData) {
-        response = await apiClient.post('/api/transactions', data, {
+        response = await apiClient.post('transactions', data, {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
         });
       } else {
-        response = await apiClient.post('/api/transactions', data);
+        response = await apiClient.post('transactions', data);
       }
       return response.data;
     },

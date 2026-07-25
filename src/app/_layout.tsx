@@ -5,10 +5,17 @@ import { useEffect, useState } from "react";
 import { usePushNotifications } from "../hooks/usePushNotifications";
 import Toast from "react-native-toast-message";
 import { toastConfig } from "../components/ToastConfig";
+import { LogBox } from 'react-native';
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { useAuthStore } from "../store/authStore";
+
+// Ignore specific development warnings
+LogBox.ignoreLogs([
+  'Unable to activate keep awake',
+  'Must use physical device for Push Notifications'
+]);
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();

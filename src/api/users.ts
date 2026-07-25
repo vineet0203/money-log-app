@@ -17,7 +17,7 @@ export const useUser = () => {
   return useQuery({
     queryKey: ['userProfile'],
     queryFn: async () => {
-      const response = await apiClient.get('/api/users/profile');
+      const response = await apiClient.get('users/profile');
       return response.data as UserProfile;
     },
   });
@@ -35,7 +35,7 @@ export const useUpdateUser = () => {
         headers: isFormData ? { 'Content-Type': 'multipart/form-data' } : {},
       };
 
-      const response = await apiClient.put('/api/users/profile', formData, config);
+      const response = await apiClient.put('users/profile', formData, config);
       return response.data;
     },
     onSuccess: () => {

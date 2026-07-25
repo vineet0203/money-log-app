@@ -37,14 +37,14 @@ export function usePushNotifications() {
     registerForPushNotificationsAsync().then(async (token) => {
       if (token) {
         await AsyncStorage.setItem("pushToken", token);
-        apiClient.put('/api/users/push-token', { token }).catch(console.error);
+        apiClient.put('users/push-token', { token }).catch(console.error);
       }
     });
 
     // 2. Sync local timezone to backend
     try {
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      apiClient.put('/api/users/profile', { timezone: tz }).catch(console.error);
+      apiClient.put('users/profile', { timezone: tz }).catch(console.error);
     } catch (err) {
       console.error('Error fetching timezone', err);
     }
