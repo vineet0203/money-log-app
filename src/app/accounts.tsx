@@ -90,7 +90,7 @@ export default function AccountsScreen() {
 
       {/* Connect Bank Button */}
       <TouchableOpacity
-        onPress={openPlaidLink}
+        onPress={() => openPlaidLink()}
         disabled={isPlaidLoading}
         activeOpacity={0.8}
         className="mx-5 mb-3 mt-1 bg-indigo-50 border border-indigo-200 rounded-2xl p-4 flex-row items-center"
@@ -146,8 +146,10 @@ export default function AccountsScreen() {
           renderItem={({ item: account }) => (
             <AccountCard 
               account={account} 
+              isLoading={isPlaidLoading}
               onDetails={(acc) => router.push(`/account/${acc.id}`)}
               onCancel={(acc) => handleDelete(acc)}
+              onReconnect={(itemId) => openPlaidLink(itemId)}
             />
           )}
           onEndReached={handleLoadMore}

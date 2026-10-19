@@ -28,13 +28,41 @@ apiClient.interceptors.request.use(
   }
 );
 
+let isRefreshing = false;
+let failedQueue: any[] = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 // Response interceptor to handle 401s
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    
+    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/auth/refresh-token')) {
+      if (isRefreshing) {
+        return new Promise(function(resolve, reject) {
+          failedQueue.push({ resolve, reject });
+        }).then((token) => {
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return axios(originalRequest);
+        }).catch(err => {
+          return Promise.reject(err);
+        });
+      }
+      
       originalRequest._retry = true;
+      isRefreshing = true;
+      
       try {
         const refreshToken = await AsyncStorage.getItem("refreshToken");
         if (refreshToken) {
@@ -46,13 +74,21 @@ apiClient.interceptors.response.use(
           
           useAuthStore.setState({ token: newAccessToken });
           
+          processQueue(null, newAccessToken);
+          
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
           return axios(originalRequest);
         } else {
+          processQueue(new Error('No refresh token available'), null);
           useAuthStore.getState().logout();
+          return Promise.reject(error);
         }
       } catch (e) {
+        processQueue(e, null);
         useAuthStore.getState().logout();
+        return Promise.reject(e);
+      } finally {
+        isRefreshing = false;
       }
     }
     

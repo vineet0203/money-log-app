@@ -7,8 +7,15 @@ export interface Transaction {
   amount: number;
   type: TransactionType;
   date: string; // ISO string or simple YYYY-MM-DD
-  iconName: any; // Ionicons name
-  iconBgColor: string; // Tailwind color string for bg
+  iconName?: any; // Ionicons name
+  iconBgColor?: string; // Tailwind color string for bg or hex
+  categoryName?: string;
+  categoryColor?: string;
+  categoryIcon?: string;
+  hasReceipt?: boolean;
+  isRecurring?: boolean;
+  formattedTime?: string;
+  description?: string;
 }
 
 export interface Subscription {

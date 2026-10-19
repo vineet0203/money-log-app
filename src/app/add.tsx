@@ -13,8 +13,9 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
-import { useCategories } from "../../api/categories";
-import { useAddTransaction } from "../../api/transactions";
+import Header from "../components/common/Header";
+import { useCategories } from "../api/categories";
+import { useAddTransaction } from "../api/transactions";
 
 export default function AddScreen() {
   const params = useLocalSearchParams();
@@ -166,10 +167,10 @@ export default function AddScreen() {
 
       Alert.alert("Success", "Transaction saved successfully!");
 
-      if (isSubscriptionPay) {
+      if (router.canGoBack()) {
         router.back();
       } else {
-        router.push("/(app)/transactions");
+        router.push("/transactions");
       }
     } catch (error) {
       Alert.alert("Error", "Failed to save transaction");
@@ -182,6 +183,10 @@ export default function AddScreen() {
 
   return (
     <View className="flex-1 bg-slate-50">
+      <Header
+        title={isSubscriptionPay ? "Record Payment" : "Add Transaction"}
+        showBack={true}
+      />
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ padding: 20, paddingBottom: 100 }}

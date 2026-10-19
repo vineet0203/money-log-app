@@ -73,7 +73,7 @@ const PhoneInputField = forwardRef<PhoneInputFieldRef, PhoneInputFieldProps>(({
         }}
         countryPickerProps={{
           withSafeAreaList: true,
-          countryCodes: ["IN", "US", "CA"],
+          countryCodes: ["IN", "US"],
           filterProps: {
             autoFocus: true,
             placeholder: "Search country",

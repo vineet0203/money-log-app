@@ -61,6 +61,18 @@ export default function Layout() {
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
           <Stack.Screen name="(app)" options={{ headerShown: false }} />
+          <Stack.Screen name="reports" options={{ headerShown: false }} />
+          <Stack.Screen name="add" options={{ headerShown: false }} />
+          <Stack.Screen name="bills" options={{ headerShown: false }} />
+          <Stack.Screen name="profile" options={{ headerShown: false }} />
+          <Stack.Screen name="categories" options={{ headerShown: false }} />
+          <Stack.Screen name="notification-settings" options={{ headerShown: false }} />
+          <Stack.Screen name="accounts" options={{ headerShown: false }} />
+          <Stack.Screen name="account/[id]" options={{ headerShown: false }} />
+          <Stack.Screen name="add-subscription" options={{ headerShown: false }} />
+          <Stack.Screen name="transaction/[id]" options={{ headerShown: false }} />
+          <Stack.Screen name="subscription/[id]" options={{ headerShown: false }} />
+          <Stack.Screen name="bank-transaction/[id]" options={{ headerShown: false }} />
           <Stack.Screen name="+not-found" />
         </Stack>
         <Toast config={toastConfig} position="bottom" bottomOffset={60} />

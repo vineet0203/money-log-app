@@ -25,7 +25,7 @@ interface AuthState {
 }
 
 export const getBackendUrl = () => {
-  const url = process.env.EXPO_PUBLIC_API_URL || '';
+  const url = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5001/api';
   return url.endsWith('/') ? url : url + '/';
 };
 
@@ -204,7 +204,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       await AsyncStorage.setItem("isProfileComplete", "true");
 
-      const newName = data instanceof FormData ? data._parts.find((p: any) => p[0] === 'name')?.[1] : data.name;
+      const newName = data instanceof FormData ? (data as any)._parts?.find((p: any) => p[0] === 'name')?.[1] : data.name;
 
       set((state) => ({ 
         isProfileComplete: true,

@@ -9,12 +9,23 @@ interface HeaderProps {
   showBack?: boolean;
   rightIcon?: any;
   onRightPress?: () => void;
+  onBack?: () => void;
 }
 
-export default function Header({ title, showBack = false, rightIcon, onRightPress }: HeaderProps) {
+export default function Header({ title, showBack = false, rightIcon, onRightPress, onBack }: HeaderProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { data: unreadCount } = useUnreadNotificationsCount();
+
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+    } else if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(app)');
+    }
+  };
 
   return (
     <View
@@ -23,7 +34,7 @@ export default function Header({ title, showBack = false, rightIcon, onRightPres
     >
       <View className="flex-row items-center">
         {showBack && (
-          <TouchableOpacity onPress={() => router.back()} className="mr-3 p-1">
+          <TouchableOpacity onPress={handleBack} className="mr-3 p-1">
             <Ionicons name="arrow-back" size={24} color="#0F172A" />
           </TouchableOpacity>
         )}

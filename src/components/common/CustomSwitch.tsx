@@ -5,7 +5,7 @@ export default function CustomSwitch(props: SwitchProps) {
   return (
     <Switch 
       {...props}
-      trackColor={{ false: '#E2E8F0', true: '#6BCB77' }}
+      trackColor={{ false: '#CBD5E1', true: '#159A1D' }}
       thumbColor={Platform.OS === 'android' ? '#FFFFFF' : undefined}
     />
   );

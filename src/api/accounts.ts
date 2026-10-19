@@ -4,7 +4,7 @@ import apiClient from './client';
 export interface Account {
   id: number;
   user_id: number;
-  type: 'bank' | 'card' | 'wallet';
+  type: 'bank' | 'card' | 'wallet' | 'depository' | 'credit' | string;
   subtype?: string;
   name: string;
   account_number: string;
@@ -14,8 +14,16 @@ export interface Account {
   external_id?: string;
   logo?: string;
   color?: string;
+  balance?: number;
+  available_balance?: number;
+  credit_limit?: number;
+  currency?: string;
+  last_balance_sync?: string;
+  plaid_raw_data?: any;
   created_at?: string;
   updated_at?: string;
+  sync_status?: string;
+  item_id?: string;
 }
 
 export interface AddAccountData {
@@ -42,17 +50,32 @@ export const useAccounts = () => {
   });
 };
 
+export const useAccountDetails = (id: string | number) => {
+  return useQuery({
+    queryKey: ['account', id],
+    queryFn: async (): Promise<Account> => {
+      const response = await apiClient.get(`accounts/${id}`);
+      return response.data.data;
+    },
+    enabled: !!id,
+  });
+};
+
 export const useAccountsInfinite = () => {
   return useInfiniteQuery({
     queryKey: ['accountsInfinite'],
-    queryFn: async ({ pageParam = 0 }) => {
+    queryFn: async ({ pageParam = 1 }) => {
       const response = await apiClient.get('accounts', {
-        params: { limit: 20, offset: pageParam },
+        params: { limit: 20, page: pageParam },
       });
       return response.data;
     },
-    initialPageParam: 0,
-    getNextPageParam: (lastPage) => lastPage.nextOffset,
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      if (!lastPage.pagination) return undefined;
+      const { currentPage, totalPages } = lastPage.pagination;
+      return currentPage < totalPages ? currentPage + 1 : undefined;
+    },
   });
 };
 
@@ -187,14 +210,18 @@ export interface AccountTransaction {
 export const useAccountTransactions = (accountId: number) => {
   return useInfiniteQuery({
     queryKey: ['accountTransactions', accountId],
-    queryFn: async ({ pageParam = 0 }) => {
+    queryFn: async ({ pageParam = 1 }) => {
       const response = await apiClient.get(`accounts/${accountId}/transactions`, {
-        params: { limit: 20, offset: pageParam },
+        params: { limit: 20, page: pageParam },
       });
       return response.data;
     },
-    initialPageParam: 0,
-    getNextPageParam: (lastPage) => lastPage.nextOffset,
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      if (!lastPage.pagination) return undefined;
+      const { currentPage, totalPages } = lastPage.pagination;
+      return currentPage < totalPages ? currentPage + 1 : undefined;
+    },
     enabled: !!accountId,
   });
 };

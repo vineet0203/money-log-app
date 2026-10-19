@@ -22,7 +22,7 @@ export default function AppLayout() {
   const TabIcon = ({ name, focused, color }: { name: any, focused: boolean, color: string }) => (
     <View className="items-center justify-center w-16 h-full">
       {focused && (
-        <View className="absolute top-[-8] w-8 h-[3px] bg-primary rounded-b-md" />
+        <View className="absolute top-[-8] w-8 h-[3px] bg-[#159A1D] rounded-b-md" />
       )}
       <Ionicons name={focused ? name : `${name}-outline`} size={24} color={color} />
     </View>
@@ -32,10 +32,11 @@ export default function AppLayout() {
     <>
       <StatusBar style="dark" />
       <Tabs
+        backBehavior="history"
         screenOptions={{
         headerShown: true,
         header: ({ options }) => <Header title={options.title || 'App'} />,
-        tabBarActiveTintColor: '#6BCB77',
+        tabBarActiveTintColor: '#159A1D',
         tabBarInactiveTintColor: '#94A3B8',
         tabBarLabelStyle: {
           fontSize: 10,
@@ -67,33 +68,22 @@ export default function AppLayout() {
       <Tabs.Screen
         name="transactions"
         options={{
-          title: 'Transactions',
-          tabBarIcon: (props) => <TabIcon name="list" {...props} />,
+          title: 'Income & Expenses',
+          tabBarIcon: (props) => <TabIcon name="wallet" {...props} />,
         }}
       />
       <Tabs.Screen
-        name="add"
+        name="subscriptions"
         options={{
-          title: 'Add',
-          tabBarIcon: ({ focused }) => (
-            <View className="absolute top-[-24] bg-primary w-14 h-14 rounded-full items-center justify-center shadow-lg shadow-primary/40 border-4 border-white">
-              <Ionicons name="add" size={32} color="#FFF" />
-            </View>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="reports"
-        options={{
-          title: 'Reports',
-          tabBarIcon: (props) => <TabIcon name="pie-chart" {...props} />,
+          title: 'Recurring',
+          tabBarIcon: (props) => <TabIcon name="repeat" {...props} />,
         }}
       />
       <Tabs.Screen
         name="more"
         options={{
           title: 'More',
-          tabBarIcon: (props) => <TabIcon name="settings" {...props} />,
+          tabBarIcon: (props) => <TabIcon name="menu" {...props} />,
         }}
       />
     </Tabs>
