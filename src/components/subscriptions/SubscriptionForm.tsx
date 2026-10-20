@@ -200,13 +200,13 @@ export default function SubscriptionForm({ initialValues = {} }: SubscriptionFor
         await addSub.mutateAsync(payload);
         Toast.show({
           type: 'success',
-          text1: 'Recurring Rule Created',
+          text1: 'Subscription Created',
           text2: `Successfully added "${name}".`,
         });
       }
       router.back();
     } catch (err: any) {
-      const msg = err?.response?.data?.error || err?.message || 'Failed to save recurring payment';
+      const msg = err?.response?.data?.error || err?.message || 'Failed to save subscription';
       Alert.alert('Error', msg);
     }
   };
@@ -634,7 +634,7 @@ export default function SubscriptionForm({ initialValues = {} }: SubscriptionFor
             <>
               <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" className="mr-1.5" />
               <Text className="text-white font-extrabold text-base tracking-wide">
-                {editingId ? 'Save Changes' : 'Create Recurring Rule'}
+                {editingId ? 'Save Changes' : 'Create Subscription'}
               </Text>
             </>
           )}

@@ -61,7 +61,16 @@ authApi.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // If request already retried and still got 401, or refresh endpoint itself failed
+    if (
+      (error.response?.status === 401 && originalRequest?._retry) ||
+      (originalRequest?.url?.includes('/auth/refresh-token') && (error.response?.status === 401 || error.response?.status === 400))
+    ) {
+      useAuthStore.getState().logout();
+      return Promise.reject(error);
+    }
+
+    if (error.response?.status === 401 && !originalRequest?._retry) {
       if (isRefreshing) {
         // If already refreshing, wait in the queue
         try {
@@ -111,7 +120,8 @@ authApi.interceptors.response.use(
       }
     }
     
-    if (error.response?.status !== 401) {
+    const isAuthError = error.response?.status === 401 || originalRequest?.url?.includes('/auth/refresh-token');
+    if (!isAuthError) {
       const message =
         error.response?.data?.error ||
         error.response?.data?.details?.[0]?.message ||

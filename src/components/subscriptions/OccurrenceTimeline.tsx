@@ -76,7 +76,7 @@ const generateIntelligentDescription = (
     } else if (diffDays < 0) {
       lateText = ` (${Math.abs(diffDays)} day${Math.abs(diffDays) > 1 ? 's' : ''} early)`;
     }
-    return `Payment for recurring occurrence on ${formattedDueDate}${lateText}`;
+    return `Payment for subscription occurrence on ${formattedDueDate}${lateText}`;
   }
 };
 
@@ -310,7 +310,7 @@ export default function OccurrenceTimeline({
           <View className="flex-row items-center gap-1.5 mb-0.5">
             <Ionicons name="calendar" size={17} color="#159A1D" />
             <Text className="text-base font-bold text-slate-900">
-              Recurring Occurrences Timeline
+              Subscription Occurrences Timeline
             </Text>
           </View>
           <Text className="text-xs text-slate-400">

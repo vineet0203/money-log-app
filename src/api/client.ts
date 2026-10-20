@@ -48,13 +48,22 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     
-    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/auth/refresh-token')) {
+    // If request already retried and still got 401, or refresh endpoint itself failed
+    if (
+      (error.response?.status === 401 && originalRequest?._retry) ||
+      (originalRequest?.url?.includes('/auth/refresh-token') && (error.response?.status === 401 || error.response?.status === 400))
+    ) {
+      useAuthStore.getState().logout();
+      return Promise.reject(error);
+    }
+    
+    if (error.response?.status === 401 && !originalRequest?._retry) {
       if (isRefreshing) {
         return new Promise(function(resolve, reject) {
           failedQueue.push({ resolve, reject });
         }).then((token) => {
           originalRequest.headers.Authorization = `Bearer ${token}`;
-          return axios(originalRequest);
+          return apiClient(originalRequest);
         }).catch(err => {
           return Promise.reject(err);
         });
@@ -77,7 +86,7 @@ apiClient.interceptors.response.use(
           processQueue(null, newAccessToken);
           
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-          return axios(originalRequest);
+          return apiClient(originalRequest);
         } else {
           processQueue(new Error('No refresh token available'), null);
           useAuthStore.getState().logout();
@@ -92,7 +101,9 @@ apiClient.interceptors.response.use(
       }
     }
     
-    if (error.response?.status !== 401) {
+    // Suppress popups on 401 or refresh errors
+    const isAuthError = error.response?.status === 401 || originalRequest?.url?.includes('/auth/refresh-token');
+    if (!isAuthError) {
       const message = error.response?.data?.error || error.response?.data?.details?.[0]?.message || 'Network error. Please try again.';
       Toast.show({
         type: 'error',

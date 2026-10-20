@@ -28,7 +28,7 @@ export default function AddSubscriptionScreen() {
 
   return (
     <View className="flex-1 bg-white">
-      <Header title={isEditing ? "Edit Recurring Payment" : "Add Recurring Payment"} showBack={true} />
+      <Header title={isEditing ? "Edit Subscription" : "Add Subscription"} showBack={true} />
       <SubscriptionForm initialValues={initialValues} />
     </View>
   );

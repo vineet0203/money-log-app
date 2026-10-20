@@ -75,7 +75,7 @@ export default function AppLayout() {
       <Tabs.Screen
         name="subscriptions"
         options={{
-          title: 'Recurring',
+          title: 'Subscriptions',
           tabBarIcon: (props) => <TabIcon name="repeat" {...props} />,
         }}
       />

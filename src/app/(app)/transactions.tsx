@@ -385,7 +385,7 @@ export default function Transactions() {
                   filterRecurring ? 'text-purple-700' : 'text-slate-600'
                 }`}
               >
-                Recurring
+                Subscriptions
               </Text>
             </TouchableOpacity>
           </View>

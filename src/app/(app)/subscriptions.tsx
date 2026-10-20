@@ -181,7 +181,7 @@ export default function SubscriptionsScreen() {
       <View className="px-5 pt-3 pb-2 bg-white border-b border-slate-100">
         <SearchBar
           onSearch={setSearchQuery}
-          placeholder="Search recurring bills & subscriptions..."
+          placeholder="Search subscriptions..."
         />
       </View>
 
@@ -233,7 +233,7 @@ export default function SubscriptionsScreen() {
       {isLoading && !isRefetching ? (
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color="#159A1D" />
-          <Text className="text-slate-400 font-semibold text-xs mt-3">Loading recurring payments...</Text>
+          <Text className="text-slate-400 font-semibold text-xs mt-3">Loading subscriptions...</Text>
         </View>
       ) : (
         <FlatList
@@ -323,7 +323,7 @@ export default function SubscriptionsScreen() {
                 {/* Section Title */}
                 <View className="flex-row justify-between items-center mt-5 mb-1 px-1">
                   <Text className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                    Recurring Schedules
+                    Active Subscriptions
                   </Text>
                   <Text className="text-xs font-bold text-[#159A1D]">
                     ${stats.monthlyTotal.toFixed(2)}/mo
@@ -365,13 +365,13 @@ export default function SubscriptionsScreen() {
                 <Ionicons name="repeat-outline" size={32} color="#94A3B8" />
               </View>
               <Text className="text-base font-bold text-slate-800 mb-1">
-                No recurring payments found
+                No subscriptions found
               </Text>
               <Text className="text-xs font-medium text-slate-400 text-center max-w-[220px] mb-4">
                 {searchQuery
                   ? `No subscriptions match "${searchQuery}".`
                   : activeTab !== 'All'
-                  ? `No ${activeTab.toLowerCase()} payments found.`
+                  ? `No ${activeTab.toLowerCase()} subscriptions found.`
                   : 'Track your subscriptions, rent, gym, and bills easily.'}
               </Text>
               <TouchableOpacity
@@ -380,7 +380,7 @@ export default function SubscriptionsScreen() {
                 className="bg-[#159A1D] px-5 py-2.5 rounded-full flex-row items-center shadow-sm shadow-[#159A1D]/20"
               >
                 <Ionicons name="add" size={16} color="#FFF" />
-                <Text className="text-white font-bold text-xs ml-1">Add Recurring Payment</Text>
+                <Text className="text-white font-bold text-xs ml-1">Add Subscription</Text>
               </TouchableOpacity>
             </View>
           }
@@ -395,7 +395,7 @@ export default function SubscriptionsScreen() {
         />
       )}
 
-      {/* Floating Add Recurring Button */}
+      {/* Floating Add Subscription Button */}
       <TouchableOpacity
         onPress={openAddScreen}
         activeOpacity={0.85}

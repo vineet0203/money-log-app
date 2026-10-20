@@ -89,10 +89,10 @@ export function usePushNotifications() {
       }
       
       // Get the Expo Push Token
-      const tokenData = await Notifications.getExpoPushTokenAsync({
-        projectId: 'your-project-id-from-app-json' // Using default since we didn't setup eas.json strictly yet
-      }).catch((e: any) => {
-        // Sometimes projectId requires eas setup. A fallback
+      const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+      const tokenData = await Notifications.getExpoPushTokenAsync(
+        projectId ? { projectId } : undefined
+      ).catch((e: any) => {
         return Notifications.getExpoPushTokenAsync();
       });
       

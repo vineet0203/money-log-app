@@ -105,11 +105,11 @@ export default function Home() {
           />
         )}
 
-        {/* 3. ACTIVE RECURRING */}
+        {/* 3. ACTIVE SUBSCRIPTIONS */}
         <View className="flex-row justify-between items-end mb-3">
           <View className="flex-row items-center">
             <View className="w-2 h-2 rounded-full bg-[#159A1D] mr-2" />
-            <Text className="text-lg font-extrabold text-slate-900">Active Recurring</Text>
+            <Text className="text-lg font-extrabold text-slate-900">Active Subscriptions</Text>
           </View>
           <TouchableOpacity onPress={() => router.push('/subscriptions')} activeOpacity={0.7}>
             <Text className="text-[#159A1D] font-bold text-sm">See All</Text>
@@ -149,11 +149,11 @@ export default function Home() {
           </View>
         )}
 
-        {/* 4. UPCOMING DUE - UPCOMING BILLS & RECURRING */}
+        {/* 4. UPCOMING DUE - UPCOMING BILLS & SUBSCRIPTIONS */}
         <View className="flex-row justify-between items-end mb-3">
           <View className="flex-row items-center">
             <View className="w-2 h-2 rounded-full bg-orange-500 mr-2" />
-            <Text className="text-lg font-extrabold text-slate-900">Upcoming Bills & Recurring</Text>
+            <Text className="text-lg font-extrabold text-slate-900">Upcoming Bills & Subscriptions</Text>
           </View>
           <TouchableOpacity onPress={() => router.push('/bills')} activeOpacity={0.7}>
             <Text className="text-[#159A1D] font-bold text-sm">See All</Text>

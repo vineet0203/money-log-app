@@ -116,7 +116,7 @@ export default function TransactionDetailsScreen() {
     Alert.alert(
       'Delete Transaction',
       isLinked
-        ? `This transaction is linked to recurring payment "${transaction.subscription_name || 'Recurring'}". Are you sure you want to delete this record?`
+        ? `This transaction is linked to subscription "${transaction.subscription_name || 'Subscription'}". Are you sure you want to delete this record?`
         : `Are you sure you want to delete "${transaction.title}" ($${parseFloat(transaction.amount).toFixed(2)})? This cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
@@ -285,7 +285,7 @@ export default function TransactionDetailsScreen() {
           </View>
         </View>
 
-        {/* Linked Recurring Payment Card (if subscription linked) */}
+        {/* Linked Subscription Card (if subscription linked) */}
         {isLinkedSubscription && (
           <TouchableOpacity
             onPress={() => router.push(`/subscription/${transaction.subscription_id}`)}
@@ -299,11 +299,11 @@ export default function TransactionDetailsScreen() {
               <View className="flex-1">
                 <View className="flex-row items-center">
                   <Text className="text-xs font-extrabold text-purple-900 uppercase tracking-wider">
-                    Linked Recurring Rule
+                    Linked Subscription
                   </Text>
                 </View>
                 <Text className="text-sm font-bold text-purple-950 mt-0.5">
-                  {transaction.subscription_name || 'Recurring Subscription'}
+                  {transaction.subscription_name || 'Subscription'}
                 </Text>
               </View>
             </View>

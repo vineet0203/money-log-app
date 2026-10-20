@@ -1,5 +1,5 @@
 import "../global.css";
-import { Stack } from "expo-router";
+import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useState } from "react";
 import { usePushNotifications } from "../hooks/usePushNotifications";
@@ -27,6 +27,11 @@ const queryClient = new QueryClient({
       staleTime: 0, // Always fetch fresh data
       refetchOnMount: true,
       refetchOnWindowFocus: true,
+      retry: (failureCount, error: any) => {
+        // Never retry if server responded with 401 unauthorized
+        if (error?.response?.status === 401) return false;
+        return failureCount < 2;
+      },
     },
   },
 });
@@ -34,13 +39,15 @@ const queryClient = new QueryClient({
 export default function Layout() {
   usePushNotifications(); // Request permissions and send token when logged in
 
-  const { initAuth, isInitialized } = useAuthStore();
+  const { initAuth, isInitialized, isAuthenticated } = useAuthStore();
+  const segments = useSegments();
+  const router = useRouter();
   const [minTimePassed, setMinTimePassed] = useState(false);
 
   useEffect(() => {
     initAuth();
 
-    // Ensure splash screen stays for at least 5 seconds
+    // Ensure splash screen stays for at least 2 seconds
     const timer = setTimeout(() => {
       setMinTimePassed(true);
     }, 2000);
@@ -49,10 +56,19 @@ export default function Layout() {
 
   useEffect(() => {
     if (isInitialized && minTimePassed) {
-      // Hide the splash screen once auth is hydrated AND 5 seconds have passed
+      // Hide the splash screen once auth is hydrated AND min time has passed
       SplashScreen.hideAsync();
     }
   }, [isInitialized, minTimePassed]);
+
+  // Global redirect to login whenever session is revoked or unauthorized
+  useEffect(() => {
+    if (!isInitialized) return;
+    const inAuthGroup = segments[0] === '(auth)';
+    if (!isAuthenticated && !inAuthGroup) {
+      router.replace('/(auth)');
+    }
+  }, [isAuthenticated, isInitialized, segments]);
 
   if (!isInitialized || !minTimePassed) return null;
   return (

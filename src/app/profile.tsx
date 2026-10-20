@@ -17,8 +17,10 @@ import dayjs from 'dayjs';
 import Header from '../components/common/Header';
 import { useUser, useUpdateUser } from '../api/users';
 import { getBackendUrl } from '../store/authStore';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ProfileScreen() {
+  const insets = useSafeAreaInsets();
   const { data: user, isLoading: isUserLoading } = useUser();
   const updateUser = useUpdateUser();
 
@@ -197,13 +199,14 @@ export default function ProfileScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
       className="flex-1 bg-slate-50"
     >
       <Header title="My Profile" showBack={true} />
 
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 60 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: isDirty ? 160 : 40 }}
         showsVerticalScrollIndicator={false}
       >
         {/* 1. TOP IDENTITY HERO CARD (Aligned with Web) */}
@@ -275,15 +278,15 @@ export default function ProfileScreen() {
             {/* Full Name Field */}
             <View>
               <View className="flex-row items-center mb-1.5">
-                <Ionicons name="person-outline" size={14} color="#64748B" className="mr-1.5" />
-                <Text className="text-xs font-bold text-slate-700">Full Name</Text>
+                <Ionicons name="person-outline" size={14} color="#64748B" />
+                <Text className="text-xs font-bold text-slate-700 ml-1.5">Full Name</Text>
               </View>
               <TextInput
                 value={name}
                 onChangeText={setName}
                 placeholder="Enter full name"
                 placeholderTextColor="#94A3B8"
-                className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800"
+                className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold text-slate-800"
               />
               <Text className="text-[10px] text-slate-400 mt-1 pl-1">
                 Your name as displayed across your reports and transactions.
@@ -293,8 +296,8 @@ export default function ProfileScreen() {
             {/* Email Address Field */}
             <View className="pt-2 border-t border-slate-50">
               <View className="flex-row items-center mb-1.5">
-                <Ionicons name="mail-outline" size={14} color="#64748B" className="mr-1.5" />
-                <Text className="text-xs font-bold text-slate-700">Email Address</Text>
+                <Ionicons name="mail-outline" size={14} color="#64748B" />
+                <Text className="text-xs font-bold text-slate-700 ml-1.5">Email Address</Text>
               </View>
               <TextInput
                 value={email}
@@ -303,7 +306,7 @@ export default function ProfileScreen() {
                 placeholderTextColor="#94A3B8"
                 keyboardType="email-address"
                 autoCapitalize="none"
-                className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800"
+                className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold text-slate-800"
               />
               <Text className="text-[10px] text-slate-400 mt-1 pl-1">
                 Used for notification summaries and renewal reminders.
@@ -313,11 +316,13 @@ export default function ProfileScreen() {
             {/* Phone Number Field (Verified Identity - Locked) */}
             <View className="pt-2 border-t border-slate-50">
               <View className="flex-row items-center justify-between mb-1.5">
-                <View className="flex-row items-center">
-                  <Ionicons name="call-outline" size={14} color="#64748B" className="mr-1.5" />
-                  <Text className="text-xs font-bold text-slate-700">Phone Number</Text>
+                <View className="flex-row items-center flex-1 mr-2">
+                  <Ionicons name="call-outline" size={14} color="#64748B" />
+                  <Text className="text-xs font-bold text-slate-700 ml-1.5" numberOfLines={1}>
+                    Phone Number
+                  </Text>
                 </View>
-                <View className="flex-row items-center">
+                <View className="flex-row items-center shrink-0">
                   <Ionicons name="checkmark-circle" size={12} color="#159A1D" />
                   <Text className="text-[10px] font-bold text-[#159A1D] ml-1">
                     OTP Primary ID
@@ -325,10 +330,10 @@ export default function ProfileScreen() {
                 </View>
               </View>
               <View className="bg-slate-100/70 border border-slate-200 rounded-xl px-4 py-3 flex-row items-center justify-between">
-                <Text className="text-sm font-bold text-slate-600 font-mono">
+                <Text className="text-sm font-bold text-slate-600 font-mono flex-1 mr-2" numberOfLines={1}>
                   {user.phone_number}
                 </Text>
-                <Ionicons name="lock-closed" size={14} color="#94A3B8" />
+                <Ionicons name="lock-closed" size={14} color="#94A3B8" className="shrink-0" />
               </View>
               <Text className="text-[10px] text-slate-400 mt-1 pl-1">
                 Your phone number is your secure login credential.
@@ -338,14 +343,14 @@ export default function ProfileScreen() {
             {/* Timezone Preference */}
             <View className="pt-2 border-t border-slate-50">
               <View className="flex-row items-center mb-1.5">
-                <Ionicons name="globe-outline" size={14} color="#64748B" className="mr-1.5" />
-                <Text className="text-xs font-bold text-slate-700">Timezone</Text>
+                <Ionicons name="globe-outline" size={14} color="#64748B" />
+                <Text className="text-xs font-bold text-slate-700 ml-1.5">Timezone</Text>
               </View>
               <View className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 flex-row items-center justify-between">
-                <Text className="text-sm font-semibold text-slate-800">
+                <Text className="text-sm font-semibold text-slate-800 flex-1 mr-2" numberOfLines={1}>
                   {(user as any).timezone || 'Asia/Kolkata (IST, GMT+05:30)'}
                 </Text>
-                <Ionicons name="time-outline" size={16} color="#64748B" />
+                <Ionicons name="time-outline" size={16} color="#64748B" className="shrink-0" />
               </View>
               <Text className="text-[10px] text-slate-400 mt-1 pl-1">
                 Used to evaluate midnight bill schedules and recurring reminders.
@@ -354,61 +359,68 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* 3. SAVE / RESET ACTION ROW */}
-        {isDirty && (
-          <View className="flex-row items-center gap-3 mb-6">
-            <TouchableOpacity
-              onPress={handleReset}
-              disabled={updateUser.isPending}
-              activeOpacity={0.7}
-              className="flex-1 bg-white border border-slate-200 py-3.5 rounded-2xl items-center justify-center flex-row shadow-xs"
-            >
-              <Ionicons name="refresh-outline" size={16} color="#64748B" />
-              <Text className="text-sm font-bold text-slate-600 ml-1.5">Reset</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={handleSave}
-              disabled={updateUser.isPending}
-              activeOpacity={0.8}
-              className="flex-2 bg-[#159A1D] py-3.5 rounded-2xl items-center justify-center flex-row shadow-sm shadow-[#159A1D]/30"
-            >
-              {updateUser.isPending ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : (
-                <>
-                  <Ionicons name="checkmark-sharp" size={18} color="#FFFFFF" />
-                  <Text className="text-sm font-extrabold text-white ml-1.5">Save Changes</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* 4. ACCOUNT SECURITY & PREFERENCES CARD (Matching Web) */}
+        {/* 3. ACCOUNT SECURITY & PREFERENCES CARD (Matching Web) */}
         <View className="mb-6">
           <Text className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2.5 ml-1">
             Account Security & Preferences
           </Text>
 
-          <View className="bg-white rounded-3xl p-4 border border-slate-100 shadow-sm shadow-slate-100">
-            <View className="flex-row items-center justify-between py-2.5 border-b border-slate-50">
-              <Text className="text-xs font-semibold text-slate-500">Account Type</Text>
-              <Text className="text-xs font-extrabold text-slate-800">Single-Tenant Owner</Text>
+          <View className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm shadow-slate-100 space-y-3">
+            <View className="flex-row items-center justify-between py-2 border-b border-slate-50">
+              <Text className="text-xs font-semibold text-slate-500 shrink-0 mr-3">Account Type</Text>
+              <Text className="text-xs font-extrabold text-slate-800 text-right flex-1" numberOfLines={1}>
+                Single-Tenant Owner
+              </Text>
             </View>
-            <View className="flex-row items-center justify-between py-2.5 border-b border-slate-50">
-              <Text className="text-xs font-semibold text-slate-500">Authentication</Text>
-              <Text className="text-xs font-extrabold text-slate-800">Two-Factor SMS OTP</Text>
+            <View className="flex-row items-center justify-between py-2 border-b border-slate-50">
+              <Text className="text-xs font-semibold text-slate-500 shrink-0 mr-3">Authentication</Text>
+              <Text className="text-xs font-extrabold text-slate-800 text-right flex-1" numberOfLines={1}>
+                Two-Factor SMS OTP
+              </Text>
             </View>
-            <View className="flex-row items-center justify-between py-2.5">
-              <Text className="text-xs font-semibold text-slate-500">Account ID</Text>
-              <Text className="text-xs font-mono font-bold text-slate-800">
+            <View className="flex-row items-center justify-between py-2">
+              <Text className="text-xs font-semibold text-slate-500 shrink-0 mr-3">Account ID</Text>
+              <Text className="text-xs font-mono font-bold text-slate-800 text-right flex-1" numberOfLines={1}>
                 USR-{String(user.id).padStart(4, '0')}
               </Text>
             </View>
           </View>
         </View>
       </ScrollView>
+
+      {/* 4. DOCKED SAVE / RESET ACTION ROW (Responsive, smooth, doesn't cause content jump) */}
+      {isDirty && (
+        <View 
+          style={{ paddingBottom: Math.max(insets.bottom, 16) + 22, paddingTop: 14 }}
+          className="px-5 bg-white border-t border-slate-200/90 shadow-lg shadow-slate-300 flex-row items-center gap-3"
+        >
+          <TouchableOpacity
+            onPress={handleReset}
+            disabled={updateUser.isPending}
+            activeOpacity={0.7}
+            className="flex-1 bg-slate-100 border border-slate-200 py-3.5 rounded-2xl items-center justify-center flex-row shadow-xs"
+          >
+            <Ionicons name="refresh-outline" size={16} color="#64748B" />
+            <Text className="text-sm font-bold text-slate-600 ml-1.5">Reset</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={handleSave}
+            disabled={updateUser.isPending}
+            activeOpacity={0.8}
+            className="flex-2 bg-[#159A1D] py-3.5 rounded-2xl items-center justify-center flex-row shadow-sm shadow-[#159A1D]/30"
+          >
+            {updateUser.isPending ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <>
+                <Ionicons name="checkmark-sharp" size={18} color="#FFFFFF" />
+                <Text className="text-sm font-extrabold text-white ml-1.5">Save Changes</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 }

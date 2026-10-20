@@ -97,11 +97,11 @@ export default function TransactionCard({
               </Text>
             </View>
 
-            {/* Recurring Badge */}
+            {/* Subscription Badge */}
             {isRecurring && (
               <View className="flex-row items-center bg-purple-50 border border-purple-100 px-1.5 py-0.5 rounded-md">
                 <Ionicons name="repeat" size={10} color="#7C3AED" />
-                <Text className="text-[10px] font-bold text-purple-700 ml-0.5">Recurring</Text>
+                <Text className="text-[10px] font-bold text-purple-700 ml-0.5">Subscription</Text>
               </View>
             )}
 

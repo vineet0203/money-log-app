@@ -533,7 +533,7 @@ export default function ReportsScreen() {
                     <Text className="text-[11px] text-purple-700 font-semibold">
                       {dashboard.commitments.committedPercentOfIncome !== null
                         ? `${dashboard.commitments.committedPercentOfIncome}% of monthly income`
-                        : 'Active recurring subscriptions'}
+                        : 'Active subscriptions'}
                     </Text>
                   </View>
                 </View>

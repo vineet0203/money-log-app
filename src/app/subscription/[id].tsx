@@ -141,14 +141,14 @@ export default function SubscriptionDetailScreen() {
     const isCancelled = subscription.status === 'cancelled';
 
     Alert.alert(
-      isCancelled ? 'Reactivate Payment' : 'Cancel Recurring Payment',
+      isCancelled ? 'Reactivate Subscription' : 'Cancel Subscription',
       isCancelled
         ? `Are you sure you want to reactivate "${subscription.name}"?`
-        : `Are you sure you want to cancel this recurring payment? This action will mark it as inactive.`,
+        : `Are you sure you want to cancel this subscription? This action will mark it as inactive.`,
       [
         { text: 'Back', style: 'cancel' },
         {
-          text: isCancelled ? 'Reactivate' : 'Cancel Payment',
+          text: isCancelled ? 'Reactivate' : 'Cancel Subscription',
           style: isCancelled ? 'default' : 'destructive',
           onPress: async () => {
             try {
@@ -160,8 +160,8 @@ export default function SubscriptionDetailScreen() {
                 type: 'success',
                 text1: isCancelled ? 'Reactivated' : 'Cancelled',
                 text2: isCancelled
-                  ? 'Recurring payment schedule resumed.'
-                  : 'Recurring payment marked as inactive.',
+                  ? 'Subscription schedule resumed.'
+                  : 'Subscription marked as inactive.',
               });
               refetch();
             } catch (err: any) {
@@ -198,9 +198,9 @@ export default function SubscriptionDetailScreen() {
         <View className="w-16 h-16 rounded-3xl bg-red-50 items-center justify-center mb-3">
           <Ionicons name="alert-circle-outline" size={32} color="#EF4444" />
         </View>
-        <Text className="text-base font-bold text-slate-800 mb-1">Recurring payment not found</Text>
+        <Text className="text-base font-bold text-slate-800 mb-1">Subscription not found</Text>
         <Text className="text-xs text-slate-400 text-center mb-4">
-          This payment schedule may have been removed or does not exist.
+          This subscription may have been removed or does not exist.
         </Text>
         <TouchableOpacity
           onPress={handleBack}
@@ -587,7 +587,7 @@ export default function SubscriptionDetailScreen() {
                 transaction={{
                   id: tx.id.toString(),
                   title: tx.title,
-                  subtitle: tx.subtitle || tx.category_name || 'Recurring Payment',
+                  subtitle: tx.subtitle || tx.category_name || 'Subscription',
                   amount: parseFloat(tx.amount?.toString() || '0'),
                   type: tx.type || 'expense',
                   date: tx.date ? tx.date.split('T')[0] : '—',
