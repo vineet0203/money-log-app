@@ -6,10 +6,53 @@ import Toast from "react-native-toast-message";
 interface AuthState {
   isAuthenticated: boolean;
   phoneNumber: string | null;
+  pendingEmail: string | null;
+  hasSeenOnboarding: boolean;
   isOtpSent: boolean;
   user: any | null;
   token: string | null;
   isProfileComplete: boolean;
+  isInitialized: boolean;
+  setHasSeenOnboarding: (seen: boolean) => Promise<void>;
+
+  // New Primary Authentication Methods
+  login: (
+    email: string,
+    password: string
+  ) => Promise<{
+    success: boolean;
+    requiresEmailVerification?: boolean;
+    email?: string;
+    error?: string;
+  }>;
+  signup: (data: {
+    name: string;
+    email: string;
+    phone_number: string;
+    password: string;
+  }) => Promise<{
+    success: boolean;
+    requiresEmailVerification?: boolean;
+    email?: string;
+    error?: string;
+    conflict?: string;
+    fields?: {
+      email?: string;
+      phone?: string;
+    };
+  }>;
+  verifyEmailOtp: (code: string) => Promise<{ success: boolean; error?: string }>;
+  resendEmailOtp: () => Promise<{ success: boolean; error?: string }>;
+  forgotPassword: (
+    email: string
+  ) => Promise<{ success: boolean; message?: string; error?: string }>;
+  resetPassword: (
+    token: string,
+    newPassword: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  setPendingEmail: (email: string | null) => void;
+
+  // Legacy OTP Flows (Kept for backward compatibility)
   sendOtp: (phone: string) => Promise<{ success: boolean; error?: string }>;
   verifyOtp: (code: string) => Promise<{
     success: boolean;
@@ -17,19 +60,20 @@ interface AuthState {
     error?: string;
   }>;
   completeProfile: (
-    data: FormData | { name: string; email?: string },
+    data: FormData | { name: string; email?: string }
   ) => Promise<{ success: boolean; error?: string }>;
-  isInitialized: boolean;
+
   initAuth: () => Promise<void>;
   logout: () => void;
+  deleteAccount: (email: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 export const getBackendUrl = () => {
-  const url = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5001/api';
-  return url.endsWith('/') ? url : url + '/';
+  const url = process.env.EXPO_PUBLIC_API_URL || "http://localhost:5001/api";
+  return url.endsWith("/") ? url : url + "/";
 };
 
-// Setup global axios instance/interceptor for the auth store
+// Setup global axios instance for the auth store
 export const authApi = axios.create({
   baseURL: getBackendUrl(),
 });
@@ -43,10 +87,13 @@ authApi.interceptors.request.use(async (config) => {
 });
 
 let isRefreshing = false;
-let failedQueue: { resolve: (value?: unknown) => void, reject: (reason?: any) => void }[] = [];
+let failedQueue: {
+  resolve: (value?: unknown) => void;
+  reject: (reason?: any) => void;
+}[] = [];
 
 const processQueue = (error: any, token: string | null = null) => {
-  failedQueue.forEach(prom => {
+  failedQueue.forEach((prom) => {
     if (error) {
       prom.reject(error);
     } else {
@@ -60,11 +107,12 @@ authApi.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    
+
     // If request already retried and still got 401, or refresh endpoint itself failed
     if (
       (error.response?.status === 401 && originalRequest?._retry) ||
-      (originalRequest?.url?.includes('/auth/refresh-token') && (error.response?.status === 401 || error.response?.status === 400))
+      (originalRequest?.url?.includes("/auth/refresh-token") &&
+        (error.response?.status === 401 || error.response?.status === 400))
     ) {
       useAuthStore.getState().logout();
       return Promise.reject(error);
@@ -72,7 +120,6 @@ authApi.interceptors.response.use(
 
     if (error.response?.status === 401 && !originalRequest?._retry) {
       if (isRefreshing) {
-        // If already refreshing, wait in the queue
         try {
           const token = await new Promise((resolve, reject) => {
             failedQueue.push({ resolve, reject });
@@ -86,7 +133,7 @@ authApi.interceptors.response.use(
 
       originalRequest._retry = true;
       isRefreshing = true;
-      
+
       try {
         const refreshToken = await AsyncStorage.getItem("refreshToken");
         if (!refreshToken) {
@@ -95,22 +142,21 @@ authApi.interceptors.response.use(
 
         const refreshResponse = await axios.post(
           `${getBackendUrl()}auth/refresh-token`,
-          { refreshToken },
+          { refreshToken }
         );
-        
-        const { accessToken: newAccessToken, refreshToken: newRefreshToken } = refreshResponse.data;
+
+        const { accessToken: newAccessToken, refreshToken: newRefreshToken } =
+          refreshResponse.data;
 
         await AsyncStorage.setItem("accessToken", newAccessToken);
         await AsyncStorage.setItem("refreshToken", newRefreshToken);
 
         useAuthStore.setState({ token: newAccessToken });
 
-        // Resolve all queued requests with the new token
         processQueue(null, newAccessToken);
-        
+
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return authApi(originalRequest);
-        
       } catch (e) {
         processQueue(e, null);
         useAuthStore.getState().logout();
@@ -119,9 +165,19 @@ authApi.interceptors.response.use(
         isRefreshing = false;
       }
     }
-    
-    const isAuthError = error.response?.status === 401 || originalRequest?.url?.includes('/auth/refresh-token');
-    if (!isAuthError) {
+
+    // Suppress intrusive global toast popups for auth pages so inline form errors render cleanly
+    const isAuthRoute =
+      originalRequest?.url?.includes("/auth/login") ||
+      originalRequest?.url?.includes("/auth/signup") ||
+      originalRequest?.url?.includes("/auth/verify-email-otp") ||
+      originalRequest?.url?.includes("/auth/resend-email-otp") ||
+      originalRequest?.url?.includes("/auth/forgot-password") ||
+      originalRequest?.url?.includes("/auth/reset-password") ||
+      originalRequest?.url?.includes("/auth/refresh-token") ||
+      error.response?.status === 401;
+
+    if (!isAuthRoute) {
       const message =
         error.response?.data?.error ||
         error.response?.data?.details?.[0]?.message ||
@@ -133,100 +189,294 @@ authApi.interceptors.response.use(
       });
     }
     return Promise.reject(error);
-  },
+  }
 );
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: false,
   phoneNumber: null,
+  pendingEmail: null,
+  hasSeenOnboarding: false,
   isOtpSent: false,
   user: null,
   token: null,
-  isProfileComplete: false,
+  isProfileComplete: true,
+  isInitialized: false,
 
+  setHasSeenOnboarding: async (seen: boolean) => {
+    if (seen) {
+      await AsyncStorage.setItem("hasSeenOnboarding", "true");
+    } else {
+      await AsyncStorage.removeItem("hasSeenOnboarding");
+    }
+    set({ hasSeenOnboarding: seen });
+  },
+
+  setPendingEmail: (email: string | null) => {
+    if (email) {
+      AsyncStorage.setItem("pendingEmail", email);
+    } else {
+      AsyncStorage.removeItem("pendingEmail");
+    }
+    set({ pendingEmail: email });
+  },
+
+  // 1. Email & Password Login
+  login: async (email: string, password: string) => {
+    try {
+      const response = await authApi.post("auth/login", { email, password });
+      const { accessToken, refreshToken, user } = response.data;
+
+      await AsyncStorage.setItem("accessToken", accessToken);
+      await AsyncStorage.setItem("refreshToken", refreshToken);
+      await AsyncStorage.setItem("user", JSON.stringify(user));
+      await AsyncStorage.setItem("isProfileComplete", "true");
+      await AsyncStorage.removeItem("pendingEmail");
+
+      set({
+        isAuthenticated: true,
+        user,
+        token: accessToken,
+        pendingEmail: null,
+        phoneNumber: user.phone_number || null,
+        isProfileComplete: true,
+      });
+
+      return { success: true };
+    } catch (error: any) {
+      const requiresVerification =
+        error.response?.data?.requiresEmailVerification ||
+        error.response?.status === 403;
+
+      if (requiresVerification) {
+        const targetEmail = error.response?.data?.email || email;
+        await AsyncStorage.setItem("pendingEmail", targetEmail);
+        set({ pendingEmail: targetEmail });
+
+        return {
+          success: false,
+          requiresEmailVerification: true,
+          email: targetEmail,
+          error:
+            error.response?.data?.error ||
+            "Please verify your email address to log in.",
+        };
+      }
+
+      const message =
+        error.response?.data?.error ||
+        error.response?.data?.details?.[0]?.message ||
+        "Login failed. Please check your credentials.";
+
+      return { success: false, error: message };
+    }
+  },
+
+  // 2. Full Account Registration
+  signup: async (data: {
+    name: string;
+    email: string;
+    phone_number: string;
+    password: string;
+  }) => {
+    try {
+      const payload = {
+        name: data.name,
+        email: data.email,
+        password: data.password,
+        phone: data.phone_number,
+        phone_number: data.phone_number,
+      };
+      const response = await authApi.post("auth/signup", payload);
+      const targetEmail = response.data?.email || data.email;
+
+      await AsyncStorage.setItem("pendingEmail", targetEmail);
+      set({ pendingEmail: targetEmail });
+
+      return {
+        success: true,
+        requiresEmailVerification: true,
+        email: targetEmail,
+      };
+    } catch (error: any) {
+      const data = error.response?.data;
+      const message =
+        data?.error ||
+        data?.message ||
+        data?.details?.[0]?.message ||
+        "Registration failed. Please try again.";
+      return {
+        success: false,
+        error: message,
+        fields: data?.fields,
+        conflict: data?.conflict,
+      };
+    }
+  },
+
+  // 3. Verify Email 6-Digit OTP
+  verifyEmailOtp: async (code: string) => {
+    const { pendingEmail } = get();
+    const emailToVerify =
+      pendingEmail || (await AsyncStorage.getItem("pendingEmail"));
+
+    if (!emailToVerify) {
+      return { success: false, error: "No pending email verification found." };
+    }
+
+    try {
+      const response = await authApi.post("auth/verify-email-otp", {
+        email: emailToVerify.trim().toLowerCase(),
+        otp: code.trim(),
+        code: code.trim(),
+      });
+
+      const { accessToken, refreshToken, user } = response.data;
+
+      await AsyncStorage.setItem("accessToken", accessToken);
+      await AsyncStorage.setItem("refreshToken", refreshToken);
+      await AsyncStorage.setItem("user", JSON.stringify(user));
+      await AsyncStorage.setItem("isProfileComplete", "true");
+      await AsyncStorage.removeItem("pendingEmail");
+
+      set({
+        isAuthenticated: true,
+        user,
+        token: accessToken,
+        pendingEmail: null,
+        phoneNumber: user.phone_number || null,
+        isProfileComplete: true,
+      });
+
+      return { success: true };
+    } catch (error: any) {
+      const message =
+        error.response?.data?.error ||
+        error.response?.data?.details?.[0]?.message ||
+        "Invalid or expired verification code.";
+      return { success: false, error: message };
+    }
+  },
+
+  // 4. Resend 6-Digit Email OTP
+  resendEmailOtp: async () => {
+    const { pendingEmail } = get();
+    const emailToVerify =
+      pendingEmail || (await AsyncStorage.getItem("pendingEmail"));
+
+    if (!emailToVerify) {
+      return { success: false, error: "No pending email verification found." };
+    }
+
+    try {
+      await authApi.post("auth/resend-email-otp", { email: emailToVerify });
+      return { success: true };
+    } catch (error: any) {
+      const message =
+        error.response?.data?.error ||
+        error.response?.data?.details?.[0]?.message ||
+        "Failed to resend verification code.";
+      return { success: false, error: message };
+    }
+  },
+
+  // 5. Forgot Password Request
+  forgotPassword: async (email: string) => {
+    try {
+      const response = await authApi.post("auth/forgot-password", { email });
+      return {
+        success: true,
+        message:
+          response.data?.message ||
+          "If an account exists with that email, reset instructions have been sent.",
+      };
+    } catch (error: any) {
+      const message =
+        error.response?.data?.error ||
+        error.response?.data?.details?.[0]?.message ||
+        "Failed to request password reset.";
+      return { success: false, error: message };
+    }
+  },
+
+  // 6. Reset Password Confirmation
+  resetPassword: async (token: string, newPassword: string) => {
+    try {
+      await authApi.post("auth/reset-password", {
+        token: token.trim(),
+        newPassword,
+      });
+      return { success: true };
+    } catch (error: any) {
+      const message =
+        error.response?.data?.error ||
+        error.response?.data?.details?.[0]?.message ||
+        "Failed to reset password. The link or code may have expired.";
+      return { success: false, error: message };
+    }
+  },
+
+  // --- Legacy Compatibility Methods ---
   sendOtp: async (phone: string) => {
     try {
       await authApi.post("auth/send-otp", { phone });
       set({ phoneNumber: phone, isOtpSent: true });
       return { success: true };
     } catch (error: any) {
-      console.log("Error sending OTP:", error);
       const message =
         error.response?.data?.error ||
         error.response?.data?.details?.[0]?.message ||
-        "Network error: Failed to connect to server";
+        "Failed to send OTP";
       return { success: false, error: message };
     }
   },
 
   verifyOtp: async (code: string) => {
     const { phoneNumber } = get();
-
     try {
       const response = await authApi.post("auth/verify-otp", {
         phone: phoneNumber,
         code,
       });
-
       const { accessToken, refreshToken, user, isProfileComplete } =
         response.data;
 
-      // Save tokens and user data securely
       await AsyncStorage.setItem("accessToken", accessToken);
       await AsyncStorage.setItem("refreshToken", refreshToken);
       await AsyncStorage.setItem("user", JSON.stringify(user));
-      await AsyncStorage.setItem(
-        "isProfileComplete",
-        isProfileComplete.toString(),
-      );
+      await AsyncStorage.setItem("isProfileComplete", "true");
 
       set({
         isAuthenticated: true,
         user,
         token: accessToken,
-        isProfileComplete,
+        isProfileComplete: true,
       });
-      return { success: true, isProfileComplete };
+      return { success: true, isProfileComplete: true };
     } catch (error: any) {
-      console.log("Error verifying OTP:", error);
       const message =
         error.response?.data?.error ||
         error.response?.data?.details?.[0]?.message ||
-        "Network error: Failed to connect to server";
+        "Failed to verify OTP";
       return { success: false, isProfileComplete: false, error: message };
     }
   },
 
   completeProfile: async (data: any) => {
-    const { user } = get();
-    if (!user) return { success: false, error: "User not logged in" };
-
     try {
       if (data instanceof FormData) {
         await authApi.put("users/profile", data, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
+          headers: { "Content-Type": "multipart/form-data" },
         });
       } else {
-        await authApi.post("auth/complete-profile", data);
+        await authApi.put("users/profile", data);
       }
-
-      await AsyncStorage.setItem("isProfileComplete", "true");
-
-      const newName = data instanceof FormData ? (data as any)._parts?.find((p: any) => p[0] === 'name')?.[1] : data.name;
-
-      set((state) => ({ 
-        isProfileComplete: true,
-        user: state.user ? { ...state.user, name: newName || state.user.name } : null
-      }));
       return { success: true };
     } catch (error: any) {
-      console.log("Error completing profile:", error);
       const message =
         error.response?.data?.error ||
         error.response?.data?.details?.[0]?.message ||
-        "Network error: Failed to connect to server";
+        "Failed to update profile";
       return { success: false, error: message };
     }
   },
@@ -248,10 +498,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       "pushToken",
       "user",
       "isProfileComplete",
+      "pendingEmail",
     ]);
+
     set({
       isAuthenticated: false,
       phoneNumber: null,
+      pendingEmail: null,
       isOtpSent: false,
       user: null,
       token: null,
@@ -259,51 +512,87 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     });
   },
 
-  isInitialized: false,
+  deleteAccount: async (email: string) => {
+    try {
+      await authApi.delete("users/account", { data: { email } });
+
+      await AsyncStorage.multiRemove([
+        "accessToken",
+        "refreshToken",
+        "pushToken",
+        "user",
+        "isProfileComplete",
+        "pendingEmail",
+      ]);
+
+      set({
+        isAuthenticated: false,
+        phoneNumber: null,
+        pendingEmail: null,
+        isOtpSent: false,
+        user: null,
+        token: null,
+        isProfileComplete: false,
+      });
+
+      return { success: true };
+    } catch (error: any) {
+      console.log("Error deleting account:", error);
+      const message =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        "Failed to delete account";
+      return { success: false, error: message };
+    }
+  },
+
   initAuth: async () => {
     try {
       let currentToken = await AsyncStorage.getItem("accessToken");
       const storedUserStr = await AsyncStorage.getItem("user");
-      const storedProfileCompleteStr =
-        await AsyncStorage.getItem("isProfileComplete");
+      const storedPendingEmail = await AsyncStorage.getItem("pendingEmail");
+      const storedHasSeenOnboarding = await AsyncStorage.getItem("hasSeenOnboarding");
+
+      if (storedHasSeenOnboarding === "true") {
+        set({ hasSeenOnboarding: true });
+      }
+
+      if (storedPendingEmail) {
+        set({ pendingEmail: storedPendingEmail });
+      }
 
       if (!currentToken) {
-        // No token at all, user is not logged in
         set({ isInitialized: true });
         return;
       }
 
-      // Optimistically set the state from local cache so the UI doesn't flash
       if (storedUserStr) {
+        const parsedUser = JSON.parse(storedUserStr);
         set({
           isAuthenticated: true,
-          user: JSON.parse(storedUserStr),
+          user: parsedUser,
           token: currentToken,
-          isProfileComplete: storedProfileCompleteStr === "true",
+          phoneNumber: parsedUser.phone_number || null,
+          isProfileComplete: true,
         });
       }
 
-      // Try to fetch the profile with the current access token
-      // IMPORTANT: Use plain axios here, NOT authApi, to avoid the response
-      // interceptor racing with our own refresh logic below.
       let profileResponse;
       try {
-        profileResponse = await axios.get(
-          `${getBackendUrl()}users/profile`,
-          { headers: { Authorization: `Bearer ${currentToken}` } },
-        );
+        profileResponse = await axios.get(`${getBackendUrl()}users/profile`, {
+          headers: { Authorization: `Bearer ${currentToken}` },
+        });
       } catch (error: any) {
         if (error.response?.status === 401) {
-          // Access token expired — try to refresh it
           const refreshToken = await AsyncStorage.getItem("refreshToken");
           if (!refreshToken) {
-            // No refresh token either, force logout
             await AsyncStorage.multiRemove([
               "accessToken",
               "refreshToken",
               "pushToken",
               "user",
               "isProfileComplete",
+              "pendingEmail",
             ]);
             set({ isAuthenticated: false, user: null, token: null });
             return;
@@ -312,24 +601,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           try {
             const refreshResponse = await axios.post(
               `${getBackendUrl()}auth/refresh-token`,
-              { refreshToken },
+              { refreshToken }
             );
-            const {
-              accessToken: newAccessToken,
-              refreshToken: newRefreshToken,
-            } = refreshResponse.data;
+            const { accessToken: newAccessToken, refreshToken: newRefreshToken } =
+              refreshResponse.data;
 
             await AsyncStorage.setItem("accessToken", newAccessToken);
             await AsyncStorage.setItem("refreshToken", newRefreshToken);
             currentToken = newAccessToken;
 
-            // Retry profile fetch with the new token
             profileResponse = await axios.get(
               `${getBackendUrl()}users/profile`,
-              { headers: { Authorization: `Bearer ${newAccessToken}` } },
+              { headers: { Authorization: `Bearer ${newAccessToken}` } }
             );
           } catch (refreshError) {
-            // Refresh token is also invalid/expired, force logout
             console.log("Refresh token invalid, logging out:", refreshError);
             await AsyncStorage.multiRemove([
               "accessToken",
@@ -337,32 +622,29 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               "pushToken",
               "user",
               "isProfileComplete",
+              "pendingEmail",
             ]);
             set({ isAuthenticated: false, user: null, token: null });
             return;
           }
         } else {
-          // Non-401 error (e.g. network error) — keep user logged in with cached data
-          console.log("Network error during initAuth, using cached data:", error.message);
+          console.log(
+            "Network error during initAuth, using cached data:",
+            error.message
+          );
           return;
         }
       }
 
-      // If we got here, we have a valid profile response
       const user = profileResponse.data;
-      const isComplete = !!(user.name && user.email);
-
       await AsyncStorage.setItem("user", JSON.stringify(user));
-      await AsyncStorage.setItem(
-        "isProfileComplete",
-        isComplete.toString(),
-      );
 
       set({
         isAuthenticated: true,
         user,
         token: currentToken,
-        isProfileComplete: isComplete,
+        phoneNumber: user.phone_number || null,
+        isProfileComplete: true,
       });
     } catch (e) {
       console.log("Failed to initialize auth:", e);

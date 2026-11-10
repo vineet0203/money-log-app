@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, ScrollView, TouchableOpacity, Text, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { useAuthStore } from '../../store/authStore';
 import { useUser } from '../../api/users';
 import UserCard from '../../components/morescreen/UserCard';
@@ -58,6 +59,11 @@ export default function More() {
             iconName="notifications-outline" 
             title="Notification Settings" 
             onPress={() => router.push('/notification-settings')}
+          />
+          <SettingsItem 
+            iconName="shield-checkmark-outline" 
+            title="Privacy Policy" 
+            onPress={() => WebBrowser.openBrowserAsync('https://moneylog.com/privacy-policy')}
           />
           <SettingsItem 
             iconName="log-out-outline" 

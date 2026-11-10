@@ -3,14 +3,15 @@ import apiClient from './client';
 
 export interface UserProfile {
   id: number;
-  firebase_uid: string;
-  phone_number: string;
+  firebase_uid?: string;
+  phone_number: string | null;
   name: string;
-  email: string | null;
+  email: string;
   profile_image_url: string | null;
   global_sms_enabled: boolean;
   global_email_enabled: boolean;
   global_push_enabled: boolean;
+  created_at?: string;
 }
 
 export const useUser = () => {
@@ -43,3 +44,20 @@ export const useUpdateUser = () => {
     },
   });
 };
+
+export const deleteAccountApi = async (email: string) => {
+  const response = await apiClient.delete('users/account', { data: { email } });
+  return response.data;
+};
+
+export const useDeleteAccount = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (email: string) => deleteAccountApi(email),
+    onSuccess: () => {
+      queryClient.clear();
+    },
+  });
+};
+

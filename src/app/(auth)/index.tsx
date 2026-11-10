@@ -1,107 +1,182 @@
+import React, { useState } from "react";
 import {
   View,
   Text,
-  Image,
+  TextInput,
   TouchableOpacity,
-  ActivityIndicator,
-  Platform,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { StatusBar } from "expo-status-bar";
-import { useState, useRef } from "react";
 import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuthStore } from "../../store/authStore";
-import PhoneInputField, { PhoneInputFieldRef } from "../../components/fields/PhoneInputField";
-import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import { loginSchema } from "../../validations/auth";
+import AuthScreenLayout from "../../components/auth/AuthScreenLayout";
 
-export default function Login() {
+export default function LoginScreen() {
   const router = useRouter();
-  const { sendOtp } = useAuthStore();
-  const phoneInputRef = useRef<PhoneInputFieldRef>(null);
-  const [phone, setPhone] = useState("");
-  const [formattedPhone, setFormattedPhone] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const { login } = useAuthStore();
 
-  const handleSendOtp = async () => {
-    // Validate phone number according to the selected country's rules
-    const isValid = phoneInputRef.current?.isValidNumber(phone);
-    if (!isValid) {
-      setError("Please enter a valid phone number for the selected country");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<{
+    email?: string;
+    password?: string;
+    general?: string;
+  }>({});
+
+  const handleLogin = async () => {
+    setErrors({});
+
+    // 1. Zod Validation
+    const validation = loginSchema.safeParse({ email, password });
+    if (!validation.success) {
+      const fieldErrors: { email?: string; password?: string } = {};
+      validation.error.issues.forEach((issue) => {
+        const fieldName = issue.path[0] as "email" | "password";
+        if (!fieldErrors[fieldName]) {
+          fieldErrors[fieldName] = issue.message;
+        }
+      });
+      setErrors(fieldErrors);
       return;
     }
-    
-    setError("");
+
+    // 2. API Call
     setLoading(true);
-    const result = await sendOtp(formattedPhone);
+    const result = await login(email.trim().toLowerCase(), password);
     setLoading(false);
 
     if (result.success) {
-      router.push("/(auth)/verify");
+      router.replace("/(app)");
+    } else if (result.requiresEmailVerification) {
+      router.push("/(auth)/verify-email");
     } else {
-      setError(result.error || "Failed to send OTP. Please try again.");
+      setErrors({
+        general:
+          result.error || "Login failed. Please check your credentials.",
+      });
     }
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={["top", "bottom"]}>
-      <KeyboardAwareScrollView
-        contentContainerStyle={{
-          flexGrow: 1,
-          justifyContent: "center",
-          paddingHorizontal: 32,
-        }}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        enableOnAndroid={true}
-        enableAutomaticScroll={true}
-        extraScrollHeight={Platform.OS === "ios" ? 20 : 0}
-      >
-        {/* Header / Logo Section */}
-        <View className="items-center mb-8 mt-4">
-          <View className="shadow-lg shadow-primary/30 rounded-3xl mb-4 bg-white">
-            <Image
-              source={require("../../../assets/images/logo.png")}
-              className="w-28 h-28 rounded-3xl"
-              resizeMode="contain"
-            />
-          </View>
-          <View className="flex-row items-center mb-4 h-12 w-64 mt-2">
-            <Image
-              source={require("../../../assets/images/logo_text.jpeg")}
-              className="w-full h-full"
-              resizeMode="contain"
-            />
-          </View>
-          <Text className="text-textMuted text-sm text-center font-medium">
-            Enter your phone number to continue
+    <AuthScreenLayout
+      title="Welcome Back"
+      subtitle="Sign in with your email and password to access your accounts."
+      showBack={false}
+      actionTitle="Sign In"
+      actionSubtitle={
+        <TouchableOpacity
+          onPress={() => router.push("/(auth)/signup")}
+          activeOpacity={0.7}
+        >
+          <Text className="text-slate-500 text-sm font-medium">
+            Don't have an account?{" "}
+            <Text className="text-[#159A1D] font-bold">Sign Up</Text>
+          </Text>
+        </TouchableOpacity>
+      }
+      onAction={handleLogin}
+      loading={loading}
+    >
+      {/* Global Error Banner */}
+      {errors.general ? (
+        <View className="bg-red-50 border border-red-200 rounded-2xl p-3.5 mb-5 flex-row items-center">
+          <Ionicons name="alert-circle" size={18} color="#DC2626" />
+          <Text className="text-red-700 text-xs font-semibold ml-2 flex-1">
+            {errors.general}
           </Text>
         </View>
+      ) : null}
 
-        {/* Form Section */}
-        <View className="w-full">
-          <PhoneInputField
-            ref={phoneInputRef}
-            value={phone}
-            onChangeText={setPhone}
-            onChangeFormattedText={setFormattedPhone}
-            error={error}
+      {/* Email Input */}
+      <View className="mb-4">
+        <Text className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 ml-1">
+          Email Address
+        </Text>
+        <View
+          className={`flex-row items-center bg-slate-50 border rounded-2xl px-4 h-14 ${
+            errors.email ? "border-red-400 bg-red-50/20" : "border-slate-200"
+          }`}
+        >
+          <TextInput
+            value={email}
+            onChangeText={(text) => {
+              setEmail(text);
+              if (errors.email)
+                setErrors((prev) => ({ ...prev, email: undefined }));
+            }}
+            placeholder="name@example.com"
+            placeholderTextColor="#94A3B8"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            className="flex-1 text-base font-semibold text-slate-900 py-0"
           />
+          <Ionicons name="mail-outline" size={20} color="#94A3B8" />
+        </View>
+        {errors.email ? (
+          <Text className="text-red-500 text-xs font-medium mt-1.5 ml-2">
+            {errors.email}
+          </Text>
+        ) : null}
+      </View>
 
+      {/* Password Input */}
+      <View className="mb-2">
+        <Text className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 ml-1">
+          Password
+        </Text>
+        <View
+          className={`flex-row items-center bg-slate-50 border rounded-2xl px-4 h-14 ${
+            errors.password ? "border-red-400 bg-red-50/20" : "border-slate-200"
+          }`}
+        >
+          <TextInput
+            value={password}
+            onChangeText={(text) => {
+              setPassword(text);
+              if (errors.password)
+                setErrors((prev) => ({ ...prev, password: undefined }));
+            }}
+            placeholder="Enter your password"
+            placeholderTextColor="#94A3B8"
+            secureTextEntry={!showPassword}
+            autoCapitalize="none"
+            autoCorrect={false}
+            className="flex-1 text-base font-semibold text-slate-900 py-0"
+          />
           <TouchableOpacity
-            onPress={handleSendOtp}
-            disabled={loading}
-            className={`w-full bg-primary py-4 rounded-full items-center mt-2 shadow-md shadow-primary/30 ${loading ? "opacity-70" : ""}`}
+            onPress={() => setShowPassword((prev) => !prev)}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            activeOpacity={0.7}
           >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text className="text-white font-bold text-lg">Continue</Text>
-            )}
+            <Ionicons
+              name={showPassword ? "eye-off-outline" : "eye-outline"}
+              size={20}
+              color="#94A3B8"
+            />
           </TouchableOpacity>
         </View>
-      </KeyboardAwareScrollView>
-      <StatusBar style="dark" />
-    </SafeAreaView>
+        {errors.password ? (
+          <Text className="text-red-500 text-xs font-medium mt-1.5 ml-2">
+            {errors.password}
+          </Text>
+        ) : null}
+      </View>
+
+      {/* Forgot Password Link */}
+      <View className="flex-row justify-end mb-2">
+        <TouchableOpacity
+          onPress={() => router.push("/(auth)/forgot-password")}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          activeOpacity={0.7}
+        >
+          <Text className="text-xs font-bold text-[#159A1D]">
+            Forgot Password?
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </AuthScreenLayout>
   );
 }

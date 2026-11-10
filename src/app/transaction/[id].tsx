@@ -104,7 +104,7 @@ export default function TransactionDetailsScreen() {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/transactions');
+      router.replace('/(app)/transactions');
     }
   };
 

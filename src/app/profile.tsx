@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,29 +10,47 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as WebBrowser from 'expo-web-browser';
+import { useRouter } from 'expo-router';
 import dayjs from 'dayjs';
 import Header from '../components/common/Header';
 import { useUser, useUpdateUser } from '../api/users';
-import { getBackendUrl } from '../store/authStore';
+import { getBackendUrl, useAuthStore } from '../store/authStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import PhoneInputField, {
+  PhoneInputFieldRef,
+} from '../components/fields/PhoneInputField';
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { data: user, isLoading: isUserLoading } = useUser();
   const updateUser = useUpdateUser();
+  const { deleteAccount } = useAuthStore();
+  const phoneInputRef = useRef<PhoneInputFieldRef>(null);
 
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [formattedPhone, setFormattedPhone] = useState('');
   const [profileImageUri, setProfileImageUri] = useState<string | null>(null);
   const [isPhotoRemoved, setIsPhotoRemoved] = useState(false);
+
+  // Account Deletion Flow State (Apple Guideline 5.1.1(v))
+  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+  const [deleteStep, setDeleteStep] = useState<1 | 2>(1);
+  const [deleteEmailInput, setDeleteEmailInput] = useState('');
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (user) {
       setName(user.name || '');
-      setEmail(user.email || '');
+      setPhone(user.phone_number || '');
+      setFormattedPhone(user.phone_number || '');
       setProfileImageUri(null);
       setIsPhotoRemoved(false);
     }
@@ -41,7 +59,7 @@ export default function ProfileScreen() {
   const isDirty =
     Boolean(user) &&
     (name !== (user?.name || '') ||
-      email !== (user?.email || '') ||
+      (formattedPhone || phone) !== (user?.phone_number || '') ||
       profileImageUri !== null ||
       isPhotoRemoved);
 
@@ -114,9 +132,74 @@ export default function ProfileScreen() {
   const handleReset = () => {
     if (user) {
       setName(user.name || '');
-      setEmail(user.email || '');
+      setPhone(user.phone_number || '');
+      setFormattedPhone(user.phone_number || '');
       setProfileImageUri(null);
       setIsPhotoRemoved(false);
+    }
+  };
+
+  const handleOpenPrivacyPolicy = async () => {
+    try {
+      await WebBrowser.openBrowserAsync('https://moneylog.com/privacy-policy');
+    } catch (e) {
+      Alert.alert('Error', 'Unable to open Privacy Policy browser.');
+    }
+  };
+
+  const handleOpenDeleteModal = () => {
+    setDeleteEmailInput('');
+    setDeleteError(null);
+    setDeleteStep(1);
+    setIsDeleteModalVisible(true);
+  };
+
+  const handleProceedToConfirmation = () => {
+    const trimmedInput = deleteEmailInput.trim().toLowerCase();
+    const userEmail = (user?.email || '').trim().toLowerCase();
+
+    if (!trimmedInput) {
+      setDeleteError('Please enter your email address to continue.');
+      return;
+    }
+
+    if (trimmedInput !== userEmail) {
+      setDeleteError('Entered email does not match your registered account email.');
+      return;
+    }
+
+    setDeleteError(null);
+    setDeleteStep(2);
+  };
+
+  const handleConfirmPermanentDelete = async () => {
+    try {
+      setIsDeleting(true);
+      setDeleteError(null);
+
+      const result = await deleteAccount(deleteEmailInput.trim());
+
+      if (result.success) {
+        setIsDeleteModalVisible(false);
+        Alert.alert(
+          'Account Deleted',
+          'Your account and all associated data have been permanently deleted from Money Log.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                router.replace('/(auth)');
+              },
+            },
+          ]
+        );
+      } else {
+        setDeleteError(result.error || 'Failed to delete account. Please try again.');
+      }
+    } catch (error: any) {
+      setDeleteError(error?.message || 'An unexpected error occurred during deletion.');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -126,19 +209,20 @@ export default function ProfileScreen() {
       return;
     }
 
-    if (email && email.trim() !== '') {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email.trim())) {
-        Alert.alert('Invalid Email', 'Please enter a valid email address.');
-        return;
-      }
+    if (phone && phoneInputRef.current && !phoneInputRef.current.isValidNumber(phone)) {
+      Alert.alert('Invalid Phone', 'Please enter a valid phone number for the selected country.');
+      return;
     }
 
     try {
+      const phoneNumberToSave = formattedPhone || phone;
+
       if (profileImageUri) {
         const formData = new FormData() as any;
         formData.append('name', name.trim());
-        formData.append('email', email.trim());
+        if (phoneNumberToSave) {
+          formData.append('phone_number', phoneNumberToSave);
+        }
 
         const filename = profileImageUri.split('/').pop() || 'profile.jpg';
         const match = /\.(\w+)$/.exec(filename);
@@ -154,8 +238,10 @@ export default function ProfileScreen() {
       } else {
         const payload: any = {
           name: name.trim(),
-          email: email.trim(),
         };
+        if (phoneNumberToSave) {
+          payload.phone_number = phoneNumberToSave;
+        }
         if (isPhotoRemoved) {
           payload.remove_profile_image = true;
         }
@@ -254,7 +340,7 @@ export default function ProfileScreen() {
 
           {/* Email / Phone Subtitle */}
           <Text className="text-xs text-slate-500 font-medium mb-1">
-            {email || user.email || 'No email registered'} • {user.phone_number}
+            {user.email || 'No email registered'} • {formattedPhone || phone || user.phone_number || 'No phone set'}
           </Text>
 
           {/* Member Since Date */}
@@ -293,50 +379,49 @@ export default function ProfileScreen() {
               </Text>
             </View>
 
-            {/* Email Address Field */}
-            <View className="pt-2 border-t border-slate-50">
-              <View className="flex-row items-center mb-1.5">
-                <Ionicons name="mail-outline" size={14} color="#64748B" />
-                <Text className="text-xs font-bold text-slate-700 ml-1.5">Email Address</Text>
-              </View>
-              <TextInput
-                value={email}
-                onChangeText={setEmail}
-                placeholder="name@example.com"
-                placeholderTextColor="#94A3B8"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold text-slate-800"
-              />
-              <Text className="text-[10px] text-slate-400 mt-1 pl-1">
-                Used for notification summaries and renewal reminders.
-              </Text>
-            </View>
-
-            {/* Phone Number Field (Verified Identity - Locked) */}
+            {/* Email Address Field (Verified Primary ID - Locked) */}
             <View className="pt-2 border-t border-slate-50">
               <View className="flex-row items-center justify-between mb-1.5">
                 <View className="flex-row items-center flex-1 mr-2">
-                  <Ionicons name="call-outline" size={14} color="#64748B" />
+                  <Ionicons name="mail-outline" size={14} color="#64748B" />
                   <Text className="text-xs font-bold text-slate-700 ml-1.5" numberOfLines={1}>
-                    Phone Number
+                    Email Address
                   </Text>
                 </View>
                 <View className="flex-row items-center shrink-0">
                   <Ionicons name="checkmark-circle" size={12} color="#159A1D" />
                   <Text className="text-[10px] font-bold text-[#159A1D] ml-1">
-                    OTP Primary ID
+                    Primary ID
                   </Text>
                 </View>
               </View>
               <View className="bg-slate-100/70 border border-slate-200 rounded-xl px-4 py-3 flex-row items-center justify-between">
-                <Text className="text-sm font-bold text-slate-600 font-mono flex-1 mr-2" numberOfLines={1}>
-                  {user.phone_number}
+                <Text className="text-sm font-bold text-slate-600 flex-1 mr-2" numberOfLines={1}>
+                  {user.email || 'No email registered'}
                 </Text>
                 <Ionicons name="lock-closed" size={14} color="#94A3B8" className="shrink-0" />
               </View>
               <Text className="text-[10px] text-slate-400 mt-1 pl-1">
-                Your phone number is your secure login credential.
+                Your email address is your verified primary login ID and cannot be changed.
+              </Text>
+            </View>
+
+            {/* Phone Number Field (Editable Mobile Number) */}
+            <View className="pt-2 border-t border-slate-50">
+              <View className="flex-row items-center mb-1.5">
+                <Ionicons name="call-outline" size={14} color="#64748B" />
+                <Text className="text-xs font-bold text-slate-700 ml-1.5">
+                  Mobile Phone Number
+                </Text>
+              </View>
+              <PhoneInputField
+                ref={phoneInputRef}
+                value={phone}
+                onChangeText={setPhone}
+                onChangeFormattedText={setFormattedPhone}
+              />
+              <Text className="text-[10px] text-slate-400 -mt-2 pl-1">
+                Used for SMS reminders and urgent account notifications.
               </Text>
             </View>
 
@@ -386,9 +471,67 @@ export default function ProfileScreen() {
             </View>
           </View>
         </View>
+
+        {/* 4. PRIVACY & POLICIES */}
+        <View className="mb-6">
+          <Text className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2.5 ml-1">
+            Privacy & Policies
+          </Text>
+
+          <View className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm shadow-slate-100">
+            <TouchableOpacity
+              onPress={handleOpenPrivacyPolicy}
+              activeOpacity={0.7}
+              className="flex-row items-center justify-between py-1"
+            >
+              <View className="flex-row items-center flex-1 mr-3">
+                <View className="w-9 h-9 rounded-xl bg-emerald-50 items-center justify-center border border-emerald-100 mr-3">
+                  <Ionicons name="shield-checkmark-outline" size={18} color="#159A1D" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-sm font-bold text-slate-800">Privacy Policy</Text>
+                  <Text className="text-[11px] text-slate-400 mt-0.5">
+                    How Money Log handles and protects your financial data.
+                  </Text>
+                </View>
+              </View>
+              <Ionicons name="open-outline" size={16} color="#94A3B8" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* 5. DANGER ZONE (Apple Guideline 5.1.1(v) Compliant) */}
+        <View className="mb-8">
+          <Text className="text-xs font-bold text-rose-500 uppercase tracking-wider mb-2.5 ml-1">
+            Danger Zone
+          </Text>
+
+          <View className="bg-white rounded-3xl p-5 border border-rose-100 shadow-sm shadow-rose-100">
+            <View className="flex-row items-start mb-3">
+              <View className="w-9 h-9 rounded-xl bg-rose-50 items-center justify-center border border-rose-100 mr-3 mt-0.5">
+                <Ionicons name="trash-outline" size={18} color="#E11D48" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-sm font-bold text-rose-600">Delete Account</Text>
+                <Text className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                  Permanently erase your account and all associated transactions, POS catalog, orders, and connected bank data.
+                </Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              onPress={handleOpenDeleteModal}
+              activeOpacity={0.8}
+              className="w-full bg-rose-50 border border-rose-200 py-3 rounded-2xl items-center justify-center flex-row mt-1 active:bg-rose-100"
+            >
+              <Ionicons name="trash-bin-outline" size={16} color="#DC2626" />
+              <Text className="text-xs font-extrabold text-rose-600 ml-2">Delete My Account</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </ScrollView>
 
-      {/* 4. DOCKED SAVE / RESET ACTION ROW (Responsive, smooth, doesn't cause content jump) */}
+      {/* 6. DOCKED SAVE / RESET ACTION ROW (Responsive, smooth, doesn't cause content jump) */}
       {isDirty && (
         <View 
           style={{ paddingBottom: Math.max(insets.bottom, 16) + 22, paddingTop: 14 }}
@@ -419,6 +562,266 @@ export default function ProfileScreen() {
               </>
             )}
           </TouchableOpacity>
+        </View>
+      )}
+
+      {/* 7. ACCOUNT DELETION OVERLAY (In-Tree Modal - No Navigation Context Loss) */}
+      {isDeleteModalVisible && (
+        <View
+          style={[
+            StyleSheet.absoluteFillObject,
+            {
+              backgroundColor: 'rgba(15, 23, 42, 0.65)',
+              zIndex: 9999,
+              elevation: 9999,
+              justifyContent: 'center',
+              alignItems: 'center',
+              paddingHorizontal: 20,
+            },
+          ]}
+        >
+          <View
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: 24,
+              padding: 24,
+              width: '100%',
+              maxWidth: 380,
+              maxHeight: '85%',
+              borderWidth: 1,
+              borderColor: '#F1F5F9',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 10 },
+              shadowOpacity: 0.15,
+              shadowRadius: 20,
+              elevation: 10,
+            }}
+          >
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {deleteStep === 1 ? (
+                /* STEP 1: Email Verification Modal */
+                <View>
+                  <View
+                    style={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: 16,
+                      backgroundColor: '#FFF1F2',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      alignSelf: 'center',
+                      marginBottom: 16,
+                      borderWidth: 1,
+                      borderColor: '#FFE4E6',
+                    }}
+                  >
+                    <Ionicons name="alert-circle-outline" size={30} color="#DC2626" />
+                  </View>
+
+                  <Text style={{ fontSize: 18, fontWeight: '900', color: '#0F172A', textAlign: 'center', marginBottom: 6 }}>
+                    Delete Account
+                  </Text>
+                  <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '500', textAlign: 'center', marginBottom: 16, lineHeight: 18 }}>
+                    To protect your account and verify your identity, please enter your registered email address to proceed.
+                  </Text>
+
+                  <TextInput
+                    value={deleteEmailInput}
+                    onChangeText={(txt) => {
+                      setDeleteEmailInput(txt);
+                      if (deleteError) setDeleteError(null);
+                    }}
+                    placeholder="Enter your registered email"
+                    placeholderTextColor="#94A3B8"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    style={{
+                      backgroundColor: '#F8FAFC',
+                      borderWidth: 1,
+                      borderColor: deleteError ? '#EF4444' : '#E2E8F0',
+                      borderRadius: 12,
+                      paddingHorizontal: 16,
+                      paddingVertical: 12,
+                      fontSize: 14,
+                      fontWeight: '600',
+                      color: '#1E293B',
+                    }}
+                  />
+
+                  {deleteError && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, paddingHorizontal: 4 }}>
+                      <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                      <Text style={{ fontSize: 12, fontWeight: '600', color: '#E11D48', marginLeft: 6, flex: 1 }}>
+                        {deleteError}
+                      </Text>
+                    </View>
+                  )}
+
+                  <View style={{ flexDirection: 'row', gap: 12, marginTop: 24 }}>
+                    <TouchableOpacity
+                      onPress={() => setIsDeleteModalVisible(false)}
+                      activeOpacity={0.7}
+                      style={{
+                        flex: 1,
+                        paddingVertical: 14,
+                        borderRadius: 12,
+                        backgroundColor: '#F1F5F9',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: '#334155' }}>Cancel</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={handleProceedToConfirmation}
+                      activeOpacity={0.85}
+                      style={{
+                        flex: 1,
+                        paddingVertical: 14,
+                        borderRadius: 12,
+                        backgroundColor: '#E11D48',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        shadowColor: '#E11D48',
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: 0.25,
+                        shadowRadius: 8,
+                        elevation: 4,
+                      }}
+                    >
+                      <Text style={{ fontSize: 14, fontWeight: '800', color: '#FFFFFF' }}>Next</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : (
+                /* STEP 2: Permanent Deletion Impact Confirmation */
+                <View>
+                  <View
+                    style={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: 16,
+                      backgroundColor: '#DC2626',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      alignSelf: 'center',
+                      marginBottom: 12,
+                      shadowColor: '#DC2626',
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.3,
+                      shadowRadius: 8,
+                      elevation: 4,
+                    }}
+                  >
+                    <Ionicons name="warning-outline" size={30} color="#FFFFFF" />
+                  </View>
+
+                  <Text style={{ fontSize: 18, fontWeight: '900', color: '#DC2626', textAlign: 'center', marginBottom: 4 }}>
+                    Permanent Deletion
+                  </Text>
+                  <Text style={{ fontSize: 12, color: '#475569', fontWeight: '700', textAlign: 'center', marginBottom: 12 }}>
+                    WARNING: This action is permanent and cannot be undone.
+                  </Text>
+
+                  <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '500', marginBottom: 12, lineHeight: 18 }}>
+                    Deleting your account will immediately and permanently erase all your data across Money Log:
+                  </Text>
+
+                  <View
+                    style={{
+                      backgroundColor: '#FFF1F2',
+                      borderWidth: 1,
+                      borderColor: '#FECDD3',
+                      borderRadius: 16,
+                      padding: 14,
+                      marginBottom: 16,
+                      gap: 8,
+                    }}
+                  >
+                    {[
+                      'All Income, Expense & Transfer Transactions',
+                      'All POS Orders, Receipts, & Sales Data',
+                      'All POS Products, Variants, & Suppliers',
+                      'All Recurring Subscriptions & Schedules',
+                      'All Linked Bank Accounts & Plaid Items',
+                      'All Categories, Budgets, & Analytics',
+                      'Your Login Credentials & Profile',
+                    ].map((item, idx) => (
+                      <View key={idx} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Ionicons name="close-circle" size={14} color="#DC2626" />
+                        <Text style={{ fontSize: 12, fontWeight: '600', color: '#1E293B', marginLeft: 8, flex: 1 }}>
+                          {item}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+
+                  {deleteError && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, paddingHorizontal: 4 }}>
+                      <Ionicons name="alert-circle" size={14} color="#EF4444" />
+                      <Text style={{ fontSize: 12, fontWeight: '600', color: '#E11D48', marginLeft: 6, flex: 1 }}>
+                        {deleteError}
+                      </Text>
+                    </View>
+                  )}
+
+                  <View style={{ gap: 10 }}>
+                    <TouchableOpacity
+                      onPress={handleConfirmPermanentDelete}
+                      disabled={isDeleting}
+                      activeOpacity={0.85}
+                      style={{
+                        width: '100%',
+                        paddingVertical: 14,
+                        borderRadius: 12,
+                        backgroundColor: '#DC2626',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexDirection: 'row',
+                        shadowColor: '#DC2626',
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: 0.3,
+                        shadowRadius: 8,
+                        elevation: 4,
+                      }}
+                    >
+                      {isDeleting ? (
+                        <ActivityIndicator color="#FFFFFF" size="small" />
+                      ) : (
+                        <>
+                          <Ionicons name="trash" size={16} color="#FFFFFF" />
+                          <Text style={{ fontSize: 14, fontWeight: '800', color: '#FFFFFF', marginLeft: 8 }}>
+                            Permanently Delete Everything
+                          </Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={() => {
+                        if (!isDeleting) {
+                          setDeleteStep(1);
+                        }
+                      }}
+                      disabled={isDeleting}
+                      activeOpacity={0.7}
+                      style={{
+                        width: '100%',
+                        paddingVertical: 12,
+                        borderRadius: 12,
+                        backgroundColor: '#F1F5F9',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155' }}>Go Back</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+            </ScrollView>
+          </View>
         </View>
       )}
     </KeyboardAvoidingView>

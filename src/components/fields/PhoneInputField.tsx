@@ -10,6 +10,7 @@ interface PhoneInputFieldProps {
   onChangeFormattedText: (text: string) => void;
   error?: string;
   defaultCode?: any;
+  autoFocus?: boolean;
 }
 
 export interface PhoneInputFieldRef {
@@ -22,6 +23,7 @@ const PhoneInputField = forwardRef<PhoneInputFieldRef, PhoneInputFieldProps>(({
   onChangeFormattedText,
   error,
   defaultCode = "US",
+  autoFocus = false,
 }, ref) => {
   const phoneInput = useRef<PhoneInput>(null);
   
@@ -174,7 +176,7 @@ const PhoneInputField = forwardRef<PhoneInputFieldRef, PhoneInputFieldProps>(({
         }}
         withDarkTheme={false}
         withShadow={false}
-        autoFocus
+        autoFocus={autoFocus}
       />
       {error ? (
         <Text className="text-red-500 text-sm mt-2 ml-2 font-medium">

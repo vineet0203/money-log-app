@@ -14,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import Header from "../components/common/Header";
+import Toast from "react-native-toast-message";
 import { useCategories } from "../api/categories";
 import { useAddTransaction } from "../api/transactions";
 
@@ -69,6 +70,11 @@ export default function AddScreen() {
       };
     }, [isSubscriptionPay])
   );
+
+  // Shrink the amount font as the number grows so it never gets clipped
+  const amountLength = Math.max(amount.length, 4);
+  const amountFontSize =
+    amountLength <= 6 ? 48 : amountLength <= 8 ? 40 : amountLength <= 10 ? 32 : 28;
 
   const handleAmountChange = (text: string) => {
     if (isSubscriptionPay) return; // Non-editable
@@ -165,12 +171,16 @@ export default function AddScreen() {
         });
       }
 
-      Alert.alert("Success", "Transaction saved successfully!");
+      Toast.show({
+        type: "success",
+        text1: "Transaction Saved",
+        text2: "Your transaction was recorded successfully.",
+      });
 
       if (router.canGoBack()) {
         router.back();
       } else {
-        router.push("/transactions");
+        router.replace("/(app)/transactions");
       }
     } catch (error) {
       Alert.alert("Error", "Failed to save transaction");
@@ -197,10 +207,17 @@ export default function AddScreen() {
           <Text className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">
             Amount
           </Text>
-          <View className="flex-row items-center justify-center">
+          <View
+            className="flex-row items-center justify-center self-stretch px-4"
+            style={{ minHeight: amountFontSize + 16 }}
+          >
             <Text
-              className="text-5xl font-extrabold text-slate-800 mr-2"
-              style={{ includeFontPadding: false }}
+              className="font-extrabold text-slate-800 mr-2"
+              style={{
+                includeFontPadding: false,
+                fontSize: amountFontSize,
+                lineHeight: amountFontSize + 8,
+              }}
             >
               $
             </Text>
@@ -211,8 +228,15 @@ export default function AddScreen() {
               placeholderTextColor="#CBD5E1"
               keyboardType="decimal-pad"
               editable={!isSubscriptionPay}
-              className={`text-5xl font-extrabold p-0 m-0 ${isSubscriptionPay ? "text-slate-400" : "text-slate-800"}`}
-              style={{ includeFontPadding: false }}
+              className={`font-extrabold p-0 m-0 ${isSubscriptionPay ? "text-slate-400" : "text-slate-800"}`}
+              style={{
+                includeFontPadding: false,
+                fontSize: amountFontSize,
+                lineHeight: amountFontSize + 8,
+                minWidth: amountFontSize * 2,
+                flexShrink: 1,
+                paddingRight: 4,
+              }}
               maxLength={12}
             />
           </View>

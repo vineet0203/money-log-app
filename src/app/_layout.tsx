@@ -1,15 +1,16 @@
 import "../global.css";
 import { Stack, useRouter, useSegments } from "expo-router";
-import * as SplashScreen from "expo-splash-screen";
+import * as ExpoSplashScreen from "expo-splash-screen";
 import { useEffect, useState } from "react";
 import { usePushNotifications } from "../hooks/usePushNotifications";
 import Toast from "react-native-toast-message";
 import { toastConfig } from "../components/ToastConfig";
 import { LogBox } from 'react-native';
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-
 import { useAuthStore } from "../store/authStore";
+import SplashScreen from "../screens/SplashScreen";
 
 // Ignore specific development warnings
 LogBox.ignoreLogs([
@@ -17,8 +18,8 @@ LogBox.ignoreLogs([
   'Must use physical device for Push Notifications'
 ]);
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
+// Prevent the native splash screen from auto-hiding prematurely.
+ExpoSplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -39,42 +40,50 @@ const queryClient = new QueryClient({
 export default function Layout() {
   usePushNotifications(); // Request permissions and send token when logged in
 
-  const { initAuth, isInitialized, isAuthenticated } = useAuthStore();
+  const { initAuth, isInitialized, isAuthenticated, hasSeenOnboarding } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
-  const [minTimePassed, setMinTimePassed] = useState(false);
+  const [splashElapsed, setSplashElapsed] = useState(false);
 
   useEffect(() => {
     initAuth();
+    ExpoSplashScreen.hideAsync();
 
-    // Ensure splash screen stays for at least 2 seconds
+    // Ensure branded splash screen plays smoothly for 2.2 seconds
     const timer = setTimeout(() => {
-      setMinTimePassed(true);
-    }, 2000);
+      setSplashElapsed(true);
+    }, 2200);
     return () => clearTimeout(timer);
   }, []);
 
+  // Global redirect whenever session or onboarding changes
   useEffect(() => {
-    if (isInitialized && minTimePassed) {
-      // Hide the splash screen once auth is hydrated AND min time has passed
-      SplashScreen.hideAsync();
-    }
-  }, [isInitialized, minTimePassed]);
-
-  // Global redirect to login whenever session is revoked or unauthorized
-  useEffect(() => {
-    if (!isInitialized) return;
+    if (!isInitialized || !splashElapsed) return;
     const inAuthGroup = segments[0] === '(auth)';
-    if (!isAuthenticated && !inAuthGroup) {
-      router.replace('/(auth)');
-    }
-  }, [isAuthenticated, isInitialized, segments]);
+    const inOnboarding = segments[0] === 'onboarding';
 
-  if (!isInitialized || !minTimePassed) return null;
+    if (!isAuthenticated) {
+      if (!hasSeenOnboarding && !inOnboarding) {
+        router.replace('/onboarding');
+      } else if (hasSeenOnboarding && !inAuthGroup && !inOnboarding) {
+        router.replace('/(auth)');
+      }
+    } else if (isAuthenticated && (inAuthGroup || inOnboarding)) {
+      router.replace('/(app)');
+    }
+  }, [isAuthenticated, isInitialized, hasSeenOnboarding, splashElapsed, segments]);
+
+  // Render branded splash screen while initializing or splash duration is active
+  if (!isInitialized || !splashElapsed) {
+    return <SplashScreen />;
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
-      <>
+      <SafeAreaProvider>
         <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen name="onboarding" options={{ headerShown: false }} />
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
           <Stack.Screen name="(app)" options={{ headerShown: false }} />
           <Stack.Screen name="reports" options={{ headerShown: false }} />
@@ -92,7 +101,7 @@ export default function Layout() {
           <Stack.Screen name="+not-found" />
         </Stack>
         <Toast config={toastConfig} position="bottom" bottomOffset={60} />
-      </>
+      </SafeAreaProvider>
     </QueryClientProvider>
   );
 }

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Money Log",
+    "name": "moneylog",
     "slug": "moneylog",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -8,7 +8,16 @@
     "scheme": "moneylog",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "bundleIdentifier": "com.moneylog.app"
+      "bundleIdentifier": "com.computerlog.moneylog",
+      "buildNumber": "2",
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "Allow Money Log to use Face ID for fast and secure authentication.",
+        "NSPhotoLibraryUsageDescription": "Allow Money Log to select photos for your profile picture and receipts.",
+        "NSCameraUsageDescription": "Allow Money Log to access your camera to take a profile picture or scan receipts.",
+        "NSLocationWhenInUseUsageDescription": "Allow Money Log to access your location to show where transactions occurred.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -17,7 +26,8 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.moneylog",
-      "googleServicesFile": "./google-services.json"
+      "googleServicesFile": "./google-services.json",
+      "usesCleartextTraffic": true
     },
     "web": {
       "output": "static"
@@ -60,9 +70,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "d5890453-0ac4-48a0-a03d-7d3b511af67a"
+        "projectId": "90e6de61-cb81-4332-8448-effe6c0c5249"
       }
     },
-    "owner": "moneylogdevs-team"
+    "owner": "bipul-work-team"
   }
 }

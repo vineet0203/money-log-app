@@ -179,7 +179,7 @@ export default function SubscriptionDetailScreen() {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/subscriptions');
+      router.replace('/(app)/subscriptions');
     }
   };
 

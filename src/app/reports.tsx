@@ -517,7 +517,7 @@ export default function ReportsScreen() {
         {dashboard?.commitments && (
           <View className="px-5 pt-4">
             <TouchableOpacity
-              onPress={() => router.push('/subscriptions')}
+              onPress={() => router.push('/(app)/subscriptions')}
               activeOpacity={0.8}
               className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm shadow-slate-100"
             >
